@@ -1,7 +1,8 @@
 # RapidParc
-This repository provides the prototype implementation of our article
-Bisten, J., von Bornhaupt, V., Grün, J., Bauer, T., Rüber, T., Schultz, T. 2026, RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation, Imaging Neuroscience (accepted for publication)
-If you use our model and/or code in your research, please cite our publication.
+This repository provides RapidParc, a fast, accurate, and lesion-robust transformer based algorithm for registration-free parcellation of streamlines from diffusion MRI tractography. If you use our model and/or code in your research, please cite the corresponding publication:
+> Bisten, J., von Bornhaupt, V., Grün, J., Bauer, T., Rüber, T., Schultz, T.  
+> RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation  
+> Imaging Neuroscience 2026 (accepted for publication)
 
 # Installation
 1.  Clone the repository, i.e.
