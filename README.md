@@ -1,5 +1,7 @@
 # RapidParc
-A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation.
+This repository provides the prototype implementation of our article
+Bisten, J., von Bornhaupt, V., Grün, J., Bauer, T., Rüber, T., Schultz, T. 2026, RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation, Imaging Neuroscience (accepted for publication)
+If you use our model and/or code in your research, please cite our publication.
 
 # Installation
 1.  Clone the repository, i.e.
