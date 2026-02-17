@@ -37,7 +37,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
         device = torch.device("cpu")
     
     y_pred_43 = rapidParc(model_folder_path = model_folder_path,
-                          streamlines = data_tensor,
+                          inputTractogram = data_tensor,
                           eval_batch_size=eval_batch_size,
                           eval_context_size=eval_context_size,
                           return_anatomical_clusters=True,
@@ -57,7 +57,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
 
 
 def rapidParc(model_folder_path: Union[str, os.PathLike],
-              streamlines: Union[list, torch.Tensor, np.ndarray],
+              inputTractogram: Union[list, torch.Tensor, np.ndarray],
               eval_batch_size: int = 512,
               eval_context_size: int = 2000,
               return_anatomical_clusters: bool = True,
@@ -72,7 +72,7 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
         model_folder_path (PathLike | str):
             Folder of the training run. Should contain a "model"-subfolder
 
-        streamlines (list | Tensor | ndarray):
+        inputTractogram (list | Tensor | ndarray):
             The streamlines of a single tractogram. Assumed to be one of the following: 
             NumPy Array of length numStreamlines, where each entry has shape [n_i, 3]
             NumPy Array of shape [numStreamlines, lenStreamline, 3] where lenStreamline >= 15
@@ -118,22 +118,22 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
     int_to_label = np.load("utils/int_to_label.npy")
 
     # Resample Streamlines to 15 supporting points if necessary and change datatype to torch.Tensor
-    if isinstance(streamlines, np.ndarray):
-        if streamlines.dtype == object or streamlines.shape[-1] != 15:
-            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=streamlines, verbose=print_time)
+    if isinstance(inputTractogram, np.ndarray):
+        if inputTractogram.dtype == object or inputTractogram.shape[-1] != 15:
+            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
         else:
-            origStreamlines = streamlines
-            data_tensor = torch.from_numpy(streamlines).pin_memory()
-    elif isinstance(streamlines, torch.Tensor):
-        if streamlines.size(-2) == 15:
-            origStreamlines = streamlines
-            data_tensor = streamlines.pin_memory()
+            origStreamlines = inputTractogram
+            data_tensor = torch.from_numpy(inputTractogram).pin_memory()
+    elif isinstance(inputTractogram, torch.Tensor):
+        if inputTractogram.size(-2) == 15:
+            origStreamlines = inputTractogram
+            data_tensor = inputTractogram.pin_memory()
         else:
-            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=streamlines, verbose=print_time)
-    elif isinstance(streamlines, list) or isinstance(streamlines, nib.streamlines.array_sequence.ArraySequence):
-        data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=streamlines, verbose=print_time)
+            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
+    elif isinstance(inputTractogram, list) or isinstance(inputTractogram, nib.streamlines.array_sequence.ArraySequence):
+        data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
     else:
-        raise ValueError(f"Streamlines have to be a list, numpy.ndarray or torch.Tensor, but got {type(streamlines)}.")
+        raise ValueError(f"inputTractogram has to be a list, numpy.ndarray or torch.Tensor, but got {type(inputTractogram)}.")
    
     assert data_tensor.shape[1] == 15 and data_tensor.shape[2] == 3 and len(data_tensor.shape) == 3, "Assumed the input tensor to have a format of [numStreamlines, 15, 3]"
 

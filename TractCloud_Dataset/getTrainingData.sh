@@ -1,3 +1,6 @@
+# Please check out the Slice Licence agreement before downloading the following files
+# https://github.com/SlicerDMRI/TractCloud/blob/main/LICENSE
+
 curl -L "https://github.com/SlicerDMRI/TractCloud/releases/download/v1.0.0/TrainData_800clu800ol.tar.gz" > "TrainData_800clu800ol.tar.gz"
 tar -xzvf TrainData_800clu800ol.tar.gz
 
