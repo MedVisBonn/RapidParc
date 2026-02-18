@@ -70,7 +70,7 @@ To test RapidParc on the TractCloud test split, use the [test function in test.p
 ```python
 from RapidParc.test import test
 
-test(experiment_path = "trained_models/rapidParc_v8",
+acc_43, f1_43 = test(experiment_path = "trained_models/rapidParc_v8",
      tractCloudDatasetPath = "TractCloud_Dataset/TrainData_800clu800ol",
      applyTestSetAugmentations = True,
      eval_batch_size = 256,
