@@ -5,3 +5,5 @@ trained_models/*
 trained_models.zip
 trained_models_all_states/*
 input_tcks/
+*.safetensors
+*.yaml

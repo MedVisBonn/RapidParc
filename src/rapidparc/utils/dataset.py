@@ -1,7 +1,5 @@
 import torch
 from pathlib import Path
-from torch.utils.data import Dataset
-from utils.transforms3D import normalize_to_identity_cube
 import numpy as np
 import pickle
 import pandas as pd
@@ -9,6 +7,8 @@ from collections import defaultdict
 from typing import Tuple, Optional, Union, Dict, List
 from collections.abc import Callable
 import os
+
+from .transforms3D import normalize_to_identity_cube
 
 
 def get_TractCloud_train_returner(inputPath: Union[str, os.PathLike],

@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
-from utils.transforms3D import normalize_to_identity_cube, RandomFlipBatch
 from torch import distributed as dist
-from utils.ddp_handling import ddp_is_running
 from typing import Tuple
+
+
+from .transforms3D import normalize_to_identity_cube, RandomFlipBatch
+from .ddp_handling import ddp_is_running
 
 
 

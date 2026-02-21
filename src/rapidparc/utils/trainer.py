@@ -8,8 +8,8 @@ from pathlib import Path
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
-from utils.ddp_handling import ddp_is_running
-from utils.model_snapshot_handling import get_latest_snapshot, load_snapshot, store_snapshot
+from .ddp_handling import ddp_is_running
+from .model_snapshot_handling import get_latest_snapshot, load_snapshot, store_snapshot
 
 
 def train(get_train_Tensor: Callable[[Union[List[int], torch.Tensor]], Tuple[torch.Tensor, torch.Tensor]],

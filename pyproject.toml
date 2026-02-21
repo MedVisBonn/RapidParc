@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rapidparc"]
+
+[project]
+name = "rapidparc"
+version = "1.0.0"
+description = "Rapid brain parcellation using deep learning"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+
+dependencies = [
+    "huggingface_hub>=0.20",
+    "safetensors",
+    "matplotlib==3.10.8",
+    "nibabel==5.3.3",
+    "numpy==2.3.5",
+    "pandas==2.3.3",
+    "pathlib==1.0.1",
+    "PyYAML==6.0.3",
+    "scikit-learn==1.8.0",
+    "seaborn==0.13.2",
+    "tqdm==4.67.1",
+    "openpyxl==3.1.5",
+    "pooch==1.9.0"
+]
+
+[project.scripts]
+rapidparc       = "rapidparc.cli_run:main"
+rapidparc-test  = "rapidparc.cli_test:main"
+rapidparc-train = "rapidparc.cli_train:main"
+
+[project.urls]
+Homepage = "https://github.com/MedVisBonn/RapidParc"

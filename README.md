@@ -13,6 +13,7 @@ This repository provides RapidParc, a fast, accurate, and lesion-robust transfor
 2. Install the python environment with dependencies, i.e.
     ```sh
     python3 -m venv .venv
+    source .venv/bin/activate
     python3 -m pip install -U pip
     python3 -m pip install -r requirements.txt
     ```

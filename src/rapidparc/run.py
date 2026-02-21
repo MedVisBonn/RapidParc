@@ -11,11 +11,9 @@ import time
 from tqdm import tqdm
 import argparse
 
-from utils.model import TransformerModel, get_embedding_layer
-from utils.model_snapshot_handling import get_latest_snapshot
-from utils.transforms3D import normalize_to_identity_cube
-from utils.args_from_yaml import load_args_from_yaml
-from utils import tck_io
+from .utils.pypi_package_helper import load_model_and_args_local_or_hf, get_mapping_800_800_to_43_hf, get_int_to_label_hf
+from .utils.transforms3D import normalize_to_identity_cube
+from .utils import tck_io
 
 
 
@@ -36,7 +34,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
     else:
         device = torch.device("cpu")
     
-    y_pred_43 = rapidParc(model_folder_path = model_folder_path,
+    y_pred_43 = rapidParc(model_name_or_path = model_folder_path,
                           inputTractogram = data_tensor,
                           eval_batch_size=eval_batch_size,
                           eval_context_size=eval_context_size,
@@ -56,7 +54,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
 
 
 
-def rapidParc(model_folder_path: Union[str, os.PathLike],
+def rapidParc(model_name_or_path: Union[str, os.PathLike],
               inputTractogram: Union[list, torch.Tensor, np.ndarray],
               eval_batch_size: int = 512,
               eval_context_size: int = 2000,
@@ -110,12 +108,12 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
     """
     
     time_start = time.time()
-    _, model = load_args_and_model(run_path=Path(model_folder_path), device=device)
+    model, _ = load_model_and_args_local_or_hf(name_or_path=model_name_or_path, device=device)
     if print_time: print(f"Time to load model: {time.time() - time_start:.2f}s")
     
     # Load Mappings
-    mapping_800_800_to_43 = torch.from_numpy(np.load("utils/mapping_from_800_800_to_43.npy")).to(device)
-    int_to_label = np.load("utils/int_to_label.npy")
+    mapping_800_800_to_43 = get_mapping_800_800_to_43_hf().to(device)
+    int_to_label = get_int_to_label_hf()
 
     # Resample Streamlines to 15 supporting points if necessary and change datatype to torch.Tensor
     if isinstance(inputTractogram, np.ndarray):
@@ -127,7 +125,7 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
     elif isinstance(inputTractogram, torch.Tensor):
         if inputTractogram.size(-2) == 15:
             origStreamlines = inputTractogram
-            data_tensor = inputTractogram.pin_memory()
+            data_tensor = inputTractogram
         else:
             data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
     elif isinstance(inputTractogram, list) or isinstance(inputTractogram, nib.streamlines.array_sequence.ArraySequence):
@@ -205,7 +203,7 @@ def resample_number_supporting_points_to_15(input_streamlines: Union[list, np.nd
         indices = np.round(np.linspace(start=0, stop=len(streamline) - 1, num=15)).astype(int)
         selected_points = streamline[indices]
         resampled_streamlines.append(selected_points)
-    resampled_streamlines = torch.from_numpy(np.array(resampled_streamlines)).pin_memory() # Shape [N, 15, 3]
+    resampled_streamlines = torch.from_numpy(np.array(resampled_streamlines)) # Shape [N, 15, 3]
     if verbose: print(f"Time to shorten streamlines: {time.time() - time_to_shorten_streamlines:.2f}s")
     return resampled_streamlines, np.array(origStreamlines, dtype=object)
 
@@ -279,35 +277,6 @@ def model_forward_pass(model: nn.Module,
 
 
 
-def load_args_and_model(run_path: Union[Path, str], device: torch.device):
-    run_path = Path(run_path)
-    args = load_args_from_yaml(run_path / "args" / "args.yml")
-
-    # Load Embedding
-    embedding = get_embedding_layer(num_support_points_per_streamline=args.num_support_points_per_streamline, 
-                                       d_model=args.d_model)
-
-    # Load Model w.r.t. that config
-    model = TransformerModel(num_layers=args.num_layers, 
-                            d_model=args.d_model,
-                            nhead=args.nhead,
-                            dim_feedforward=args.dim_feedforward,
-                            dropout=args.dropout,
-                            embedding_layer=embedding,
-                            dim_class_hidden=args.dim_class_hidden,
-                            dim_out=args.dim_out)
-    model = model.to(device)
-    model = nn.DataParallel(model)
-    latestModel = get_latest_snapshot(run_path / "model")
-    if latestModel is None:
-        raise ValueError(f"The Path {run_path} does not contain a model to evaluate")
-    checkpoint = torch.load(latestModel, weights_only=True, map_location=device)
-    model.load_state_dict(checkpoint['model'])
-    model = model.module
-
-    return args, model
-
-
 def tck_to_tensor(tck_path: Union[os.PathLike, str]) -> Tuple[torch.Tensor, np.ndarray]:
     """
     Function that reads a tck file.
@@ -369,26 +338,3 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
                 f.write(np.ndarray.tobytes(to_save))
     for tck in tcks:
         tck.close()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate a trained rapidParc model on a tck file.")
-    parser.add_argument("--tck_path", type=str, required=True, help="Path to the input tck file.")
-    parser.add_argument("--out_path", type=str, default="output_tcks", help="Path to the output folder, where the resulting tck files will be stored. If the folder does not exist, it will be created.")
-    parser.add_argument("--model_folder_path", type=str, required=True, help="Path to the folder containing the trained model and the args.yml file.")
-    parser.add_argument("--eval_batch_size", type=int, default=512, help="Batch size for evaluation.")
-    parser.add_argument("--eval_context_size", type=int, default=2000, help="Context size for evaluation.")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use for evaluation.")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
-    parser.add_argument("--print_time", action="store_true", help="Whether to print time measurements.")
-    args = parser.parse_args()
-
-    rapidParcTckEval(tck_path=args.tck_path,
-                     out_path=args.out_path,
-                     model_folder_path=args.model_folder_path,
-                     eval_batch_size=args.eval_batch_size,
-                     eval_context_size=args.eval_context_size,
-                     seed=args.seed,
-                     device=torch.device(args.device),
-                     print_time=args.print_time)
-    
