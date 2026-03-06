@@ -8,7 +8,31 @@ from typing import Tuple, Optional, Union, Dict, List
 from collections.abc import Callable
 import os
 
-from .transforms3D import normalize_to_identity_cube
+
+
+def pre_normalization(x: torch.Tensor) -> torch.Tensor:
+    """
+    Prenormalization used for TractCloud Dataset during training
+    Parameters:
+        x (torch.tensor): Shape [bs, numStreamlines, numPoints, 3]
+    
+    Returns:
+        torch.tensor: Normalized Streamlines with shape [bs, numStreamlines, numPoints, 3]
+    """
+    bs, _, _, dim = x.size()
+
+    # move minimal streamline coordinate to (0,0,0)
+    x -=  torch.amin(x, dim=(1,2)).view(bs, 1, 1, dim)
+    
+    # scale s.t. maximal value is 2
+    x /= 0.5 * torch.amax(x)
+    
+    # transform middle point of each axis to (0,0,0)
+    x -= 0.5 * torch.amax(x, dim=(1,2)).view(bs, 1, 1, dim)
+    
+    assert torch.allclose(-torch.amin(x, dim=(1,2)), torch.amax(x, dim=(1,2))), "The Result of normalization is not centered around (0,0,0)"
+    return x
+
 
 
 def get_TractCloud_train_returner(inputPath: Union[str, os.PathLike],
@@ -43,7 +67,7 @@ def get_TractCloud_train_returner(inputPath: Union[str, os.PathLike],
     # Convert to torch tensors and move to device
     streamlines = torch.from_numpy(streamlines).to(device, non_blocking=True) # Shape [numSubjects, numStreamlines, seqLength, spaceDim]
     labels_800_800 = torch.from_numpy(labels_800_800).to(device, non_blocking=True) # Shape [numSubjects, numStreamlines]
-    streamlines = normalize_to_identity_cube(streamlines) # Shape [numSubjects, numStreamlines, seqLength, spaceDim]
+    streamlines = pre_normalization(streamlines) # Shape [numSubjects, numStreamlines, seqLength, spaceDim]
     if n_vertices is not None:
         streamlines = _downsample_streamlines(streamlines, n_vertices=n_vertices) # Shape [numSubjects, numStreamlines, n_vertices, spaceDim]
 
@@ -107,9 +131,9 @@ def get_TractCloud_eval_returner(inputPath: Union[str, os.PathLike],
         labels_800_800[i] = labels_800_800[i][random_permutation]
 
     # Convert to torch tensors
-    streamlines = torch.from_numpy(streamlines).to(device, non_blocking=True) # Shape [numSubjects, numStreamlines, seqLength, spaceDim]
-    labels_43 = torch.from_numpy(labels_43).to(device, non_blocking=True) # Shape [numSubjects, numStreamlines]
-    labels_800_800 = torch.from_numpy(labels_800_800).to(device, non_blocking=True) # Shape [numSubjects, numStreamlines]
+    streamlines = torch.from_numpy(streamlines).to(device) # Shape [numSubjects, numStreamlines, seqLength, spaceDim]
+    labels_43 = torch.from_numpy(labels_43).to(device) # Shape [numSubjects, numStreamlines]
+    labels_800_800 = torch.from_numpy(labels_800_800).to(device) # Shape [numSubjects, numStreamlines]
 
     # Reshape the streamlines to context size bits
     _, numStreamlinesPerSubject, seqLength, spaceDim = streamlines.shape
@@ -117,7 +141,7 @@ def get_TractCloud_eval_returner(inputPath: Union[str, os.PathLike],
         f"For faster evaluation, we assume that numStreamlinesPerSubject % context_size == 0, " +\
         f"but got numStreamlinesPerSubject={numStreamlinesPerSubject} and context_size={eval_context_size}"
     streamlines = streamlines.reshape(-1, eval_context_size, seqLength, spaceDim)
-    streamlines = normalize_to_identity_cube(streamlines)
+    streamlines = pre_normalization(streamlines)
     labels_43 = labels_43.reshape(-1, eval_context_size)
     labels_800_800 = labels_800_800.reshape(-1, eval_context_size)
     

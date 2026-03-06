@@ -18,5 +18,12 @@ from rapidparc.utils.pypi_package_helper import get_tractCloud_dataset_path
 
 # print(filePath)
 
-test(model_name_or_path="rapidparc",
-     applyTestSetAugmentations=True)
+print(test(model_name_or_path="rapidparc",
+     applyTestSetAugmentations=True,
+     eval_batch_size=128,
+     device=torch.device("cpu")))
+
+
+# t = torch.rand(15, 3, 4)
+# t2 = t.repeat_interleave(5, dim=0)
+# print(t2)

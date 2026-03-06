@@ -55,6 +55,7 @@ def load_model_and_args_local_or_hf(name_or_path: Union[str, os.PathLike], devic
             state_dict = load_file(path_model) 
             model = model.to(device)  # deine Modellklasse
             model.load_state_dict(state_dict)
+            model.eval()
             return model, args
         
     raise NotImplementedError()
