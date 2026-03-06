@@ -176,7 +176,7 @@ def create_confusion_matrix(model: nn.Module,
 
 
     # Create confusion matrix and classification report
-    print(classification_report(y_true=labels_43, y_pred=prediction_43, digits=5, target_names=int_to_label))
+    print(classification_report(y_true=labels_43, y_pred=prediction_43, digits=5, target_names=int_to_label, zero_division=0))
 
     create_plot(y_true=labels_43, 
                 y_pred=prediction_43, 

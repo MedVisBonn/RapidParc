@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use for evaluation.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
     parser.add_argument("--print_time", action="store_true", help="Whether to print time measurements.")
+    parser.add_argument("--print_class_distributiion", action="store_true", help="Whether the predicted class distribution should be printed")
     args = parser.parse_args()
 
     rapidParcTckEval(tck_path=args.tck_path,
@@ -21,4 +22,5 @@ def main():
                         eval_context_size=args.eval_context_size,
                         seed=args.seed,
                         device=torch.device(args.device),
-                        print_time=args.print_time)
+                        print_time=args.print_time,
+                        print_class_distributiion=args.print_class_distributiion)

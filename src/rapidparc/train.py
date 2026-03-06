@@ -15,7 +15,7 @@ from .utils.trainer import train as _train
 from .utils.visualizations import create_confusion_matrix
 from .utils.transforms3D import RandomNoiseBatch, Rotate3DBatch_UnifDist, RandomNoisedNormalizeToIdentetyCube
 from .utils.ddp_handling import ddp_setup, ddp_cleanup, ddp_is_running
-from .utils.args_from_yaml import load_args_from_yaml
+from .utils.pypi_package_helper import get_tractCloud_dataset_path
 from .test import test
 
 
@@ -58,7 +58,7 @@ def train(args) -> None:
     output_folder = output_folder / args.slurm_job_id
 
     # Load Dataloaders
-    data_path = Path(args.in_dir).absolute() 
+    data_path = get_tractCloud_dataset_path(consent_given=args.tractcloud_licence_consent_given) 
     get_train_Tensor = get_TractCloud_train_returner(
         inputPath=data_path,
         device=device,
@@ -119,7 +119,7 @@ def train(args) -> None:
     
     # Store args
     if not ddp_is_running() or dist.get_rank() == 0:
-        with open(str(Path(output_folder) / 'args' / 'args.yml'), 'w') as outfile:
+        with open(str(Path(output_folder) / 'args' / 'args.yaml'), 'w') as outfile:
             yaml.dump(vars(args), outfile, default_flow_style=False, sort_keys=False)
 
     # Training
@@ -164,8 +164,7 @@ def train(args) -> None:
 
         
         accuracy_STA, macro_f1_score_STA = test(
-            experiment_path = output_folder, 
-            tractCloudDatasetPath=data_path,
+            model_name_or_path = output_folder, 
             applyTestSetAugmentations=True,
             eval_batch_size=8, 
             evaluation_context_size=2000, 
@@ -173,8 +172,7 @@ def train(args) -> None:
             print_classification_report=False)
         
         accuracy, macro_f1_score = test(
-            experiment_path = output_folder, 
-            tractCloudDatasetPath=data_path,
+            model_name_or_path = output_folder, 
             applyTestSetAugmentations=False,
             eval_batch_size=8, 
             evaluation_context_size=2000, 

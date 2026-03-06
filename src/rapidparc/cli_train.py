@@ -44,8 +44,8 @@ def main():
     parser.add_argument("--n_vertices", type=int, default=15, help="Sample to this number of vertices per streamline.")
 
     # Pathing
-    parser.add_argument("--out_dir", type=str, default="pretrained_models",help="Output directory for the experiment")
-    parser.add_argument("--in_dir", type=str, default="TractCloud_Dataset/TrainData_800clu800ol", help="Input directory")
+    parser.add_argument("--out_dir", type=str, default="pretrained_models", help="Output directory for the experiment")
+    parser.add_argument("--tractcloud_licence_consent_given", action="store_true", help="Wheter the consent to the tract cloud licence is granted")
 
 
     args = parser.parse_args()

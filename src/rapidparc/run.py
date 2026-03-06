@@ -1,4 +1,3 @@
-import sys
 import os
 from pathlib import Path
 import nibabel as nib
@@ -11,7 +10,7 @@ import time
 from tqdm import tqdm
 import argparse
 
-from .utils.pypi_package_helper import load_model_and_args_local_or_hf, get_mapping_800_800_to_43_hf, get_int_to_label_hf
+from .utils.pypi_package_helper import load_model_and_args_local_or_online, get_mapping_800_800_to_43_online, get_int_to_label_online
 from .utils.transforms3D import normalize_to_identity_cube
 from .utils import tck_io
 
@@ -24,7 +23,8 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
                      eval_context_size: int = 2000,
                      device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                      seed: int = 42,
-                     print_time: bool = True):
+                     print_time: bool = True,
+                     print_class_distributiion: bool = True):
     
     data_tensor, origStreamlines = tck_to_tensor(tck_path=tck_path)
     if torch.cuda.is_available():
@@ -42,7 +42,8 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
                           return_label_names=False,
                           device=device,
                           seed=seed,
-                          print_time=print_time)
+                          print_time=print_time,
+                          print_class_distributiion=print_class_distributiion)
     
     int_to_label = np.load("utils/int_to_label.npy")
 
@@ -62,7 +63,8 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
               return_label_names: bool = False,
               device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
               seed: int = 42,
-              print_time: bool = True) -> Union[torch.Tensor, np.ndarray]:
+              print_time: bool = True,
+              print_class_distributiion: bool = True) -> Union[torch.Tensor, np.ndarray]:
     """
     Main evaluation function.
 
@@ -102,18 +104,21 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
         print_time (bool):
             Whether the time measurements should be printed.
 
+        print_class_distributiion (bool):
+            Whether the class distribution should be printed to command line.
+
     Returns:
         y_pred (Tensor | ndarray):
             Class predictions in the domain of the 42+1 anatomical regions, 800+800 (ORG atlas) or anatomical cluster names.
     """
     
     time_start = time.time()
-    model, _ = load_model_and_args_local_or_hf(name_or_path=model_name_or_path, device=device)
+    model, _ = load_model_and_args_local_or_online(name_or_path=model_name_or_path, device=device)
     if print_time: print(f"Time to load model: {time.time() - time_start:.2f}s")
     
     # Load Mappings
-    mapping_800_800_to_43 = get_mapping_800_800_to_43_hf().to(device)
-    int_to_label = get_int_to_label_hf()
+    mapping_800_800_to_43 = get_mapping_800_800_to_43_online().to(device)
+    int_to_label = get_int_to_label_online()
 
     # Resample Streamlines to 15 supporting points if necessary and change datatype to torch.Tensor
     if isinstance(inputTractogram, np.ndarray):
@@ -167,7 +172,12 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
     # Undo the permutation
     y_pred = y_pred[torch.argsort(permutation_indeces)]
 
-    if print_time: print(f"Total time: {time.time() - time_start:.2f}s")
+    ## Create Histogram
+    if print_class_distributiion:
+        print_command_line_bar_plot(y_pred=y_pred.numpy(), int_to_label=int_to_label)
+
+    if print_time: 
+        print(f"Total time: {time.time() - time_start:.2f}s")
     
     if return_anatomical_clusters and return_label_names:
         return int_to_label[y_pred.numpy()]
@@ -338,3 +348,21 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
                 f.write(np.ndarray.tobytes(to_save))
     for tck in tcks:
         tck.close()
+
+
+def print_command_line_bar_plot(y_pred: np.ndarray, int_to_label: np.ndarray):
+    BLUE = "\033[34m"
+    RESET = "\033[0m"
+
+    counts, _ = np.histogram(y_pred, bins=43, range=(0, 42))
+    max_number_digits = np.ceil(np.log(max(counts)+1) / np.log(10)) +1
+    max_count = counts.max()
+
+    print(BLUE + "Class distribution" + RESET)
+    print(BLUE + f"{"Class".center(2+14)} | Count" + RESET)
+
+    for i, count in enumerate(counts):
+        bar_len = int(count / max_count * 50) 
+        bar = "█" * bar_len
+        bin_label = int_to_label[i].ljust(14," ")
+        print(BLUE + f"{str(i).rjust(2, " ")} {bin_label} {("("+str(count)).rjust(int(max_number_digits), " ") }) {bar}" + RESET)
