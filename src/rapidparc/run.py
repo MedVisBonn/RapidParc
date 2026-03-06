@@ -70,7 +70,9 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
 
     Parameters:
         model_folder_path (PathLike | str):
-            Folder of the training run. Should contain a "model"-subfolder
+            One of the following:
+            A pretrained model, i.e. one of "rapidparc", "rapidparc_v8" or "hemiaug"
+            Or a path of an experiment run (i.e. a folder of the `pretrained_models` folder after training)
 
         inputTractogram (list | Tensor | ndarray):
             The streamlines of a single tractogram. Assumed to be one of the following: 
