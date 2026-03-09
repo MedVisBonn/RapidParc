@@ -31,8 +31,15 @@ def create__output_folders(output_folder_name: Union[str, os.PathLike], subfolde
 
 @record
 def train(args) -> None: 
-    # For definition of the args-Object, take a look at `cli_train.py`
-    # If you want to call this function from python, you may define args as a dataclass instance.
+    """
+    Training function to retrain RapidParc.
+    
+    Parameters:
+        - args data object:
+            For definition of the args-Object, take a look at `cli_train.py`
+            If you want to call this function from python, you may define args as a dataclass instance.
+    """
+
     torch.set_float32_matmul_precision('high')
     if args.use_ddp:   
         ddp_setup()

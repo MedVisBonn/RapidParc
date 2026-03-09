@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 from pathlib import Path
 from sklearn.metrics import f1_score, accuracy_score, classification_report
-from typing import Optional, Union
+from typing import Optional, Union, Tuple
+import numpy as np
 import time
 import os
 
@@ -22,9 +23,46 @@ def test(
         device: Optional[torch.device] = None, 
         augmentations: Optional[nn.Module] = None,
         print_classification_report: bool = True,
-        slicer_licence_consent_given: bool = False
-        ):
-    """ Test the model on the test set with 30 augmentations """
+        tractcloud_licence_consent_given: bool = False
+        ) -> Tuple[float, Union[float, np.ndarray]]:
+    """ Benchmark function to test RapidParc on the tractcloud dataset test split. Creates Confusion matrices.
+
+        Parameters:
+            model_name_or_pathmodel_folder_path (PathLike | str):
+                One of the following:
+                A pretrained model, i.e. one of 'rapidparc', 'rapidparc_v8' or 'hemiaug'
+                Or a path of an experiment run (i.e. a folder of the 'pretrained_models' folder after training)
+
+            applyTestSetAugmentations (bool):
+                Whether the 30 instances of the testset should be randomly rotated and appended to the test set. 
+
+            eval_batch_size (int):
+                Batch size during forward pass. One batch has the size of eval_batch_size * evaluation_context_size * n_verticies * 3
+                Depending on your system, this value should be choosen to be small to prevent cuda-out-of-memory issues.
+
+            evaluation_context_size (int):
+                Context size during evaluation. Assumed to be a integral fraction of 10000. 
+                Default is 2000. Larger values lead to slightly better results, but at the expense of higher computational effort.
+
+            device (torch.device):
+                Torch device used for evaluation. 'None' means: automatically chosen to be the best one available (if only one GPU is available).
+
+            augmentations (torch.nn.Module):
+                Optional augmentations used instead of the pre-defined random rotations. Only active if applyTestSetAugmentations is True.
+
+            print_classification_report (bool):
+                Whether the scipy classification report should be printed to the terminal.
+
+            tractcloud_licence_consent_given (bool):
+                Whether you agree to the slicer licence agreement (Only asked for once on each machine).
+                This is the licence for using the TractCloud Dataset. For further information, take a look at
+                https://github.com/SlicerDMRI/TractCloud/blob/main/LICENSE   
+
+                
+        Returns:
+            Tuple of Accuracy and Macro F1 Score for y_true vs. y_pred.
+
+    """
     
     if applyTestSetAugmentations:
         print(f"Testing experiment {model_name_or_path} on the test set with 30 augmentations")
@@ -52,7 +90,7 @@ def test(
     # Load test data
     subject_streamlines, subject_labels, _ = \
         get_TractCloud_eval_returner(
-            inputPath=get_tractCloud_dataset_path(consent_given=slicer_licence_consent_given),
+            inputPath=get_tractCloud_dataset_path(consent_given=tractcloud_licence_consent_given),
             device=torch.device("cpu"),
             eval_context_size=evaluation_context_size,
             n_vertices=n_vertices,

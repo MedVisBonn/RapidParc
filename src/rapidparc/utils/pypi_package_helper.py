@@ -14,8 +14,8 @@ from .model import TransformerModel, get_embedding_layer
 CACHE_DIR = Path(pooch.os_cache("RapidParc"))
 MODEL_DIR = CACHE_DIR / "Models"
 TRACTCLOUD_FOLDER = CACHE_DIR / "TrainData_800clu800ol"
-
 PRETRAINED_MODELS = ["rapidparc", "rapidparc_v8", "hemiaug"]
+BASE_DOWNLOAD_URL = "https://github.com/MedVisBonn/RapidParc/releases/download/v1.0.0"
 HASHES = {
     "hemiaug.safetensors": "sha256:b66dfce6135aac56c3f835264e5ae9630b2497859425ad98cdc6d842c6f94435",
     "hemiaug_args.yaml": "sha256:4afe6fc28ee16f26ce98e529503a8cadaf792b5951a4293b1b89ad20c63c890c",
@@ -27,14 +27,16 @@ HASHES = {
     "rapidparc_v8_args.yaml": "sha256:1c54411e9eab69b0854f309ca47f6dfe05f125235df584664d28d2007cdf28dd"
 }
 
+
 def load_model_and_args_local_or_online(name_or_path: Union[str, os.PathLike], device: torch.device):
     if not isinstance(name_or_path, str) and not isinstance(name_or_path, os.PathLike):
-        raise NotImplementedError() 
+        raise ValueError('Expected varaible name_or_path to be either one of "rapidparc", "rapidparc_v8" and "hemiaug"'\
+                         +f'or to be an experiment path (containing model and args.yaml), but got {name_or_path}')
     if isinstance(name_or_path, str) and name_or_path in PRETRAINED_MODELS:
         ########## download args and model from Github ##########
         args_filename = f"{name_or_path}_args.yaml"
         pooch.retrieve(
-            url=f"https://github.com/MedVisBonn/RapidParc/releases/download/v1.0.0/{args_filename}",
+            url=f"{BASE_DOWNLOAD_URL}/{args_filename}",
             known_hash=HASHES[args_filename],
             path=MODEL_DIR,
             fname=args_filename
@@ -68,7 +70,7 @@ def load_model_and_args_local_or_online(name_or_path: Union[str, os.PathLike], d
         ########## load weights of the model ##########
         model_filename = f"{name_or_path}.safetensors"
         pooch.retrieve(
-            url=f"https://github.com/MedVisBonn/RapidParc/releases/download/v1.0.0/{model_filename}",
+            url=f"{BASE_DOWNLOAD_URL}/{model_filename}",
             known_hash=HASHES[model_filename],
             path=MODEL_DIR,
             fname=model_filename
@@ -132,7 +134,7 @@ def load_model_and_args_local_or_online(name_or_path: Union[str, os.PathLike], d
 def get_mapping_800_800_to_43_online() -> torch.Tensor:
     filename = "mapping_from_800_800_to_43.pt"
     pooch.retrieve(
-        url=f"https://github.com/MedVisBonn/RapidParc/releases/download/v1.0.0/{filename}",
+        url=f"{BASE_DOWNLOAD_URL}/{filename}",
         known_hash=HASHES[filename],
         path=CACHE_DIR,
         fname=filename
@@ -143,7 +145,7 @@ def get_mapping_800_800_to_43_online() -> torch.Tensor:
 def get_int_to_label_online() -> np.ndarray:
     filename = "int_to_label.npy"
     pooch.retrieve(
-        url=f"https://github.com/MedVisBonn/RapidParc/releases/download/v1.0.0/{filename}",
+        url=f"{BASE_DOWNLOAD_URL}/{filename}",
         known_hash=HASHES[filename],
         path=CACHE_DIR,
         fname=filename
