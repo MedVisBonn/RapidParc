@@ -18,7 +18,7 @@ from .utils import tck_io
 
 def rapidParcTckEval(tck_path: Union[str, os.PathLike],
                      out_path: Union[str, os.PathLike],
-                     model_folder_path: Union[str, os.PathLike],
+                     model_name_or_path: Union[str, os.PathLike],
                      eval_batch_size: int = 512,
                      eval_context_size: int = 2000,
                      device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
@@ -34,7 +34,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
     else:
         device = torch.device("cpu")
     
-    y_pred_43 = rapidParc(model_name_or_path = model_folder_path,
+    y_pred_43 = rapidParc(model_name_or_path = model_name_or_path,
                           inputTractogram = data_tensor,
                           eval_batch_size=eval_batch_size,
                           eval_context_size=eval_context_size,
@@ -63,8 +63,8 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
               return_label_names: bool = False,
               device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
               seed: int = 42,
-              print_time: bool = True,
-              print_class_distributiion: bool = True) -> Union[torch.Tensor, np.ndarray]:
+              print_time: bool = False,
+              print_class_distributiion: bool = False) -> Union[torch.Tensor, np.ndarray]:
     """
     Main evaluation function.
 

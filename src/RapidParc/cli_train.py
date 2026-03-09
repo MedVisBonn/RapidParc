@@ -12,7 +12,7 @@ def main():
     
 
     # learning_params
-    parser.add_argument("--slurm_job_id", type=str, default=job_id, help="SLURM_JOB_ID important for restarts")
+    parser.add_argument("--slurm_job_id", type=str, default=job_id, help="SLURM_JOB_ID used for identification of a run. Important for elastic restarts.")
     parser.add_argument("--use_ddp", type=bool, default=False, help="If the elastic distributed backend should be used")
     parser.add_argument("--num_epochs", type=int, default=1, help="Number of epochs")
     parser.add_argument("--context_size", type=int, default=2000, help="Context size")

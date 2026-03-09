@@ -7,3 +7,8 @@ trained_models/
 input_tcks/
 *.safetensors
 *.yaml
+*.yml
+
+rapidparc/
+rapidparc_v8/
+hemiaug/

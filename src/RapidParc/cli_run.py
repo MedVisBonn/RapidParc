@@ -6,7 +6,7 @@ def main():
     parser = argparse.ArgumentParser(prog="rapidparc-run", description="Apply RapidParc on a .tck tractogram")
     parser.add_argument("--tck_path", type=str, required=True, help="Path to the input tck file.")
     parser.add_argument("--out_path", type=str, default="output_tcks", help="Path to the output folder, where the resulting tck files will be stored. If the folder does not exist, it will be created.")
-    parser.add_argument("--model_folder_path", type=str, required=True, help="Path to the folder containing the trained model and the args.yml file.")
+    parser.add_argument("--model_name_or_path", type=str, required=True, help="One of the following: A pretrained model, i.e. one of 'rapidparc', 'rapidparc_v8' or 'hemiaug' Or a path of an experiment run (i.e. a folder of the `pretrained_models` folder after training)")
     parser.add_argument("--eval_batch_size", type=int, default=512, help="Batch size for evaluation.")
     parser.add_argument("--eval_context_size", type=int, default=2000, help="Context size for evaluation.")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use for evaluation.")
@@ -17,7 +17,7 @@ def main():
 
     rapidParcTckEval(tck_path=args.tck_path,
                         out_path=args.out_path,
-                        model_folder_path=args.model_folder_path,
+                        model_name_or_path=args.model_name_or_path,
                         eval_batch_size=args.eval_batch_size,
                         eval_context_size=args.eval_context_size,
                         seed=args.seed,

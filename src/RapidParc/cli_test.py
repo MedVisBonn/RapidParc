@@ -5,7 +5,6 @@ import torch
 def main():
     parser = argparse.ArgumentParser(prog="rapidparc-test", description="Program to benchmark RapidParc on the test split of the TractCloud dataset")
     parser.add_argument("--model_name_or_path", type=str, required=True, help="Name of the Model, i.e. `rapidparc`, `rapidparc_v8` or `hemiaug`. Alternatively path to the experiment directory, which should contain the trained model and args.yml")
-    parser.add_argument("--tractCloudDatasetPath", type=str, required=True, help="Path to the TractCloud dataset")
     parser.add_argument("--applyTestSetAugmentations", action="store_true", help="Whether to apply test set augmentations")
     parser.add_argument("--eval_batch_size", type=int, default=512, help="Evaluation batch size")
     parser.add_argument("--evaluation_context_size", type=int, default=2000, help="Evaluation context size")
