@@ -5,6 +5,7 @@ pretrained_models/
 trained_models.zip
 trained_models/
 input_tcks/
+output_tcks/
 *.safetensors
 *.yaml
 *.yml

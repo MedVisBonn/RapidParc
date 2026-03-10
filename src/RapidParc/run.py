@@ -45,7 +45,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
                           print_time=print_time,
                           print_class_distributiion=print_class_distributiion)
     
-    int_to_label = np.load("utils/int_to_label.npy")
+    int_to_label = get_int_to_label_online()
 
     results_to_tck(origStreamlines=origStreamlines, 
                    y_pred_43=y_pred_43, 
@@ -314,7 +314,7 @@ def tck_to_tensor(tck_path: Union[os.PathLike, str]) -> Tuple[torch.Tensor, np.n
         indices = np.round(np.linspace(start=0, stop=len(streamline) - 1, num=15)).astype(int)
         selected_points = streamline[indices]
         shortened_streamlines.append(selected_points)
-    shortened_streamlines = torch.from_numpy(np.array(shortened_streamlines)).pin_memory() # Shape [N, 15, 3]
+    shortened_streamlines = torch.from_numpy(np.array(shortened_streamlines)) # Shape [N, 15, 3]
     print(f"Time to shorten streamlines: {time.time() - time_to_shorten_streamlines:.2f}s")
     return shortened_streamlines, np.array(origStreamlines, dtype=object)
 
@@ -353,18 +353,25 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
 
 
 def print_command_line_bar_plot(y_pred: np.ndarray, int_to_label: np.ndarray):
+    import math
     BLUE = "\033[34m"
     RESET = "\033[0m"
 
     counts, _ = np.histogram(y_pred, bins=43, range=(0, 42))
-    max_number_digits = np.ceil(np.log(max(counts)+1) / np.log(10)) +1
-    max_count = counts.max()
+    max_number_digits = math.ceil(np.log(max(counts)+1) / np.log(10)) +1
+    max_count = counts[:42].max()
 
     print(BLUE + "Class distribution" + RESET)
     print(BLUE + f"{"Class".center(2+14)} | Count" + RESET)
 
-    for i, count in enumerate(counts):
-        bar_len = int(count / max_count * 50) 
-        bar = "█" * bar_len
-        bin_label = int_to_label[i].ljust(14," ")
-        print(BLUE + f"{str(i).rjust(2, " ")} {bin_label} {("("+str(count)).rjust(int(max_number_digits), " ") }) {bar}" + RESET)
+    for i, count in enumerate(counts[:42]):
+        bar_len = math.ceil(count / max_count * 80) 
+        bar = "▇" * bar_len
+        bin_label = int_to_label[i].ljust(15," ")
+        print(BLUE + f"{str(i).rjust(2, " ")} {bin_label} {("("+str(count)).rjust(max_number_digits, " ") }) {bar}" + RESET)
+    
+    # Outlier Class
+    bar_len = min(math.ceil(counts[-1] / max_count * 80), 81)
+    bar = "#" * bar_len if math.ceil(counts[-1] / max_count * 80) > 80 else "▇" * bar_len
+    bin_label = "Outlier 'Other'".ljust(15," ")
+    print(BLUE + f"{str(42).rjust(2, " ")} {bin_label} {("("+str(counts[-1])).rjust(max_number_digits, " ") }) {bar}" + RESET)
