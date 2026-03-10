@@ -1,5 +1,5 @@
 import argparse
-from .run import rapidParcTckEval
+from .run import RapidParcTckEval
 import torch
 
 def main():
@@ -15,7 +15,7 @@ def main():
     parser.add_argument("--print_class_distributiion", action="store_true", help="Whether the predicted class distribution should be printed")
     args = parser.parse_args()
 
-    rapidParcTckEval(tck_path=args.tck_path,
+    RapidParcTckEval(tck_path=args.tck_path,
                         out_path=args.out_path,
                         model_name_or_path=args.model_name_or_path,
                         eval_batch_size=args.eval_batch_size,

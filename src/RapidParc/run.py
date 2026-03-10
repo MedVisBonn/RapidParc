@@ -1,14 +1,12 @@
 import os
 from pathlib import Path
 import nibabel as nib
-from typing import Union, List, Tuple
+from typing import Union, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-torch.set_float32_matmul_precision('high')
 import time
 from tqdm import tqdm
-import argparse
 
 from .utils.pypi_package_helper import load_model_and_args_local_or_online, get_mapping_800_800_to_43_online, get_int_to_label_online
 from .utils.transforms3D import normalize_to_identity_cube
@@ -16,7 +14,7 @@ from .utils import tck_io
 
 
 
-def rapidParcTckEval(tck_path: Union[str, os.PathLike],
+def RapidParcTckEval(tck_path: Union[str, os.PathLike],
                      out_path: Union[str, os.PathLike],
                      model_name_or_path: Union[str, os.PathLike],
                      eval_batch_size: int = 512,
@@ -24,8 +22,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
                      device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                      seed: int = 42,
                      print_time: bool = True,
-                     print_class_distributiion: bool = True):
-    
+                     print_class_distributiion: bool = True):  
     data_tensor, origStreamlines = tck_to_tensor(tck_path=tck_path)
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -34,7 +31,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
     else:
         device = torch.device("cpu")
     
-    y_pred_43 = rapidParc(model_name_or_path = model_name_or_path,
+    y_pred_43 = RapidParc(model_name_or_path = model_name_or_path,
                           inputTractogram = data_tensor,
                           eval_batch_size=eval_batch_size,
                           eval_context_size=eval_context_size,
@@ -55,7 +52,7 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
 
 
 
-def rapidParc(model_name_or_path: Union[str, os.PathLike],
+def RapidParc(model_name_or_path: Union[str, os.PathLike],
               inputTractogram: Union[list, torch.Tensor, np.ndarray],
               eval_batch_size: int = 512,
               eval_context_size: int = 2000,
@@ -113,7 +110,8 @@ def rapidParc(model_name_or_path: Union[str, os.PathLike],
         y_pred (Tensor | ndarray):
             Class predictions in the domain of the 42+1 anatomical regions, 800+800 (ORG atlas) or anatomical cluster names.
     """
-    
+
+    torch.set_float32_matmul_precision('high')
     time_start = time.time()
     model, _ = load_model_and_args_local_or_online(name_or_path=model_name_or_path, device=device)
     if print_time: print(f"Time to load model: {time.time() - time_start:.2f}s")
@@ -304,7 +302,7 @@ def tck_to_tensor(tck_path: Union[os.PathLike, str]) -> Tuple[torch.Tensor, np.n
     time_to_load_tck = time.time()
     tractogram = nib.streamlines.load(tck_path)
     loaded_streamlines = tractogram.streamlines
-    print(f"Time to load tck file with {len(loaded_streamlines)}: {time.time() - time_to_load_tck:.2f}s")
+    print(f"Time to load tck file with {len(loaded_streamlines)} streamlines: {time.time() - time_to_load_tck:.2f}s")
     time_to_shorten_streamlines = time.time()
     origStreamlines = []
     shortened_streamlines = []
@@ -343,7 +341,6 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
     [tck.write({}) for tck in tcks]
     for k in range(len(int_to_label)):
         to_save = origStreamlines[y_pred_43_np == k]
-        print(f"Number of streamlines in {int_to_label[k]}: {len(to_save)}")
         if len(to_save) > 0:
             to_save = np.ascontiguousarray(np.vstack([np.vstack([s, np.array([np.nan]*3)]) for s in to_save]), dtype='<f4')
             with open(output_path / f"{int_to_label[k]}.tck", "ab") as f:
@@ -356,22 +353,23 @@ def print_command_line_bar_plot(y_pred: np.ndarray, int_to_label: np.ndarray):
     import math
     BLUE = "\033[34m"
     RESET = "\033[0m"
+    MAX_LINE_WIDTH = 50
 
     counts, _ = np.histogram(y_pred, bins=43, range=(0, 42))
     max_number_digits = math.ceil(np.log(max(counts)+1) / np.log(10)) +1
     max_count = counts[:42].max()
 
     print(BLUE + "Class distribution" + RESET)
-    print(BLUE + f"{"Class".center(2+14)} | Count" + RESET)
+    print(BLUE + f"{"Class".center(2+15)} | Count" + RESET)
 
     for i, count in enumerate(counts[:42]):
-        bar_len = math.ceil(count / max_count * 80) 
+        bar_len = math.ceil(count / max_count * MAX_LINE_WIDTH) 
         bar = "▇" * bar_len
         bin_label = int_to_label[i].ljust(15," ")
         print(BLUE + f"{str(i).rjust(2, " ")} {bin_label} {("("+str(count)).rjust(max_number_digits, " ") }) {bar}" + RESET)
     
     # Outlier Class
-    bar_len = min(math.ceil(counts[-1] / max_count * 80), 81)
-    bar = "#" * bar_len if math.ceil(counts[-1] / max_count * 80) > 80 else "▇" * bar_len
+    bar_len = min(math.ceil(counts[-1] / max_count * MAX_LINE_WIDTH), MAX_LINE_WIDTH+1)
+    bar = "#" * bar_len if math.ceil(counts[-1] / max_count * MAX_LINE_WIDTH) > MAX_LINE_WIDTH else "▇" * bar_len
     bin_label = "Outlier 'Other'".ljust(15," ")
     print(BLUE + f"{str(42).rjust(2, " ")} {bin_label} {("("+str(counts[-1])).rjust(max_number_digits, " ") }) {bar}" + RESET)

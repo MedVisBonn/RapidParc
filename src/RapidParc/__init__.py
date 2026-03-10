@@ -6,8 +6,8 @@ except ImportError:
         "https://pytorch.org/get-started/locally/"
     )
 
-from .run import rapidParc
+from .run import RapidParc, RapidParcTckEval
 from .test import test
 from .train import train
 
-__all__ = ["rapidParc", "test", "train"]
+__all__ = ["RapidParc", "RapidParcTckEval", "test", "train"]
