@@ -23,7 +23,7 @@ def RapidParcTckEval(tck_path: Union[str, os.PathLike],
                      device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                      seed: int = 42,
                      print_time: bool = True,
-                     print_class_distributiion: bool = True):  
+                     print_class_distribution: bool = True):  
     loaded_streamlines = load_tcks(tck_path=tck_path, verbose=print_time)
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -41,7 +41,7 @@ def RapidParcTckEval(tck_path: Union[str, os.PathLike],
                           device=device,
                           seed=seed,
                           print_time=print_time,
-                          print_class_distributiion=print_class_distributiion)
+                          print_class_distribution=print_class_distribution)
     
     int_to_label = get_int_to_label_online()
 
@@ -61,7 +61,7 @@ def RapidParc(model_name_or_path: Union[str, os.PathLike],
               device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
               seed: int = 42,
               print_time: bool = False,
-              print_class_distributiion: bool = False) -> Union[torch.Tensor, np.ndarray]:
+              print_class_distribution: bool = False) -> Union[torch.Tensor, np.ndarray]:
     """
     Main evaluation function.
 
@@ -103,7 +103,7 @@ def RapidParc(model_name_or_path: Union[str, os.PathLike],
         print_time (bool):
             Whether the time measurements should be printed.
 
-        print_class_distributiion (bool):
+        print_class_distribution (bool):
             Whether the class distribution should be printed to command line.
 
     Returns:
@@ -181,7 +181,7 @@ def RapidParc(model_name_or_path: Union[str, os.PathLike],
     y_pred = y_pred[torch.argsort(permutation_indeces)]
 
     ## Create Histogram
-    if print_class_distributiion:
+    if print_class_distribution:
         print_command_line_bar_plot(y_pred=y_pred.numpy(), int_to_label=int_to_label)
 
     if print_time: 
