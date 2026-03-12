@@ -27,8 +27,9 @@ If you use this repository, please cite:
 Tractogram parcellation assigns anatomical labels to streamlines obtained from diffusion MRI tractography. RapidParc performs this task without anatomical registration and uses a transformer architecture to incorporate global context across streamlines.  
 
 # Method
-![Inference overview](plots/for_readme_plots/method_inference.png)
 At inference time, streamlines are shuffled and processed in groups of size `eval_context_size`. This makes it possible to scale to large tractograms while retaining contextual information beyond the individual streamline. The method is registration-free, which is especially useful when anatomical deformation, lesions, or post-surgical alterations reduce the reliability of registration-based pipelines.
+
+![Method during inference - overview](plots/for_readme_plots/method_inference.png)
 
 **Key Features:**
 - Registration-free inference
