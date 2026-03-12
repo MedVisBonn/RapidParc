@@ -174,7 +174,7 @@ def train(args) -> None:
             model_name_or_path = output_folder, 
             applyTestSetAugmentations=True,
             eval_batch_size=8, 
-            evaluation_context_size=2000, 
+            eval_context_size=2000, 
             device=device,
             print_classification_report=False)
         
@@ -182,7 +182,7 @@ def train(args) -> None:
             model_name_or_path = output_folder, 
             applyTestSetAugmentations=False,
             eval_batch_size=8, 
-            evaluation_context_size=2000, 
+            eval_context_size=2000, 
             device=device,
             print_classification_report=False)
 

@@ -315,7 +315,8 @@ def load_tcks(tck_path: Union[os.PathLike, str], verbose: bool) -> ArraySequence
     time_to_load_tck = time.time()
     tractogram = nib.streamlines.load(tck_path)
     loaded_streamlines = tractogram.streamlines
-    print(f"Time to load tck file with {len(loaded_streamlines)} streamlines: {time.time() - time_to_load_tck:.2f}s")
+    if verbose:
+        print(f"Time to load tck file with {len(loaded_streamlines)} streamlines: {time.time() - time_to_load_tck:.2f}s")
     return loaded_streamlines
 
 
