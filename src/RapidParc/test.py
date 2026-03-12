@@ -19,7 +19,7 @@ def test(
         model_name_or_path: Union[str, os.PathLike], 
         applyTestSetAugmentations: bool,
         eval_batch_size: int = 128,
-        evaluation_context_size: int = 2000,
+        eval_context_size: int = 2000,
         device: Optional[torch.device] = None, 
         augmentations: Optional[nn.Module] = None,
         print_classification_report: bool = True,
@@ -37,10 +37,10 @@ def test(
                 Whether the 30 instances of the testset should be randomly rotated and appended to the test set. 
 
             eval_batch_size (int):
-                Batch size during forward pass. One batch has the size of eval_batch_size * evaluation_context_size * n_verticies * 3
+                Batch size during forward pass. One batch has the size of eval_batch_size * eval_context_size * n_verticies * 3
                 Depending on your system, this value should be choosen to be small to prevent cuda-out-of-memory issues.
 
-            evaluation_context_size (int):
+            eval_context_size (int):
                 Context size during evaluation. Assumed to be a integral fraction of 10000. 
                 Default is 2000. Larger values lead to slightly better results, but at the expense of higher computational effort.
 
@@ -92,7 +92,7 @@ def test(
         get_TractCloud_eval_returner(
             inputPath=get_tractCloud_dataset_path(consent_given=tractcloud_licence_consent_given),
             device=torch.device("cpu"),
-            eval_context_size=evaluation_context_size,
+            eval_context_size=eval_context_size,
             n_vertices=n_vertices,
             split="test")()
     
@@ -118,9 +118,9 @@ def test(
     # Shuffle Streamlines for each Subject
     streamlines, labels_43 = torch.vmap(random_permutate_streamlines, randomness="different")(streamlines, labels_43)
     _, numStreamlinesPerSubject, seqLength, spaceDim = streamlines.shape
-    assert numStreamlinesPerSubject % evaluation_context_size == 0, \
-        f"In this script, we assume that numStreamlinesPerSubject % evaluation_context_size == 0, "\
-        +"but got numStreamlinesPerSubject={numStreamlinesPerSubject} and evaluation_context_size={evaluation_context_size}"
+    assert numStreamlinesPerSubject % eval_context_size == 0, \
+        f"In this script, we assume that numStreamlinesPerSubject % eval_context_size == 0, "\
+        +"but got numStreamlinesPerSubject={numStreamlinesPerSubject} and eval_context_size={eval_context_size}"
     streamlines = streamlines.cpu()
     labels_43 = labels_43.flatten().cpu().numpy()
     
@@ -128,7 +128,7 @@ def test(
     duration = time.time()
     streamlines = streamlines.to(device)
     map_800_800_to_43 = map_800_800_to_43.to(device)
-    streamlines = streamlines.reshape(-1, evaluation_context_size, seqLength, spaceDim)
+    streamlines = streamlines.reshape(-1, eval_context_size, seqLength, spaceDim)
     streamlines = normalize_to_identity_cube(streamlines)
 
     y_pred_800_800 = []
