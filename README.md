@@ -67,7 +67,7 @@ Install PyTorch using pip by following the official instructions: [https://pytor
 
 ### 4. Install RapidParc
 ```python
-python3 -m pip install -e .
+python3 -m pip install .
 ```
 
 # Quick start
@@ -81,7 +81,7 @@ from RapidParc import RapidParc
 predictions = RapidParc(...)
 ```
 
-The [RapidParc](https://github.com/MedVisBonn/RapidParc/blob/main/run.py#L59) function accepts multiple input-formats like `list`, `torch.Tensor` and `numpy.ndarray`. Input streamlines do not need to have the same number of supporting points. RapidParc resamples them automatically. 
+The [RapidParc](https://github.com/MedVisBonn/RapidParc/blob/main/src/RapidParc/run.py#L55) function accepts multiple input-formats like `list`, `torch.Tensor` and `numpy.ndarray`. Input streamlines do not need to have the same number of supporting points. RapidParc resamples them automatically. 
 
 #### Example:
 ```python
@@ -202,7 +202,7 @@ RapidParcTckEval(...)
 
 # Reproducing results
 
-To benchmark RapidParc on the TractCloud test split, use [RapidParc.test](https://github.com/MedVisBonn/RapidParc/blob/main/test.py#L23). The `RapidParc.test` function automatically fetches the TractCloud dataset during evaluation.
+To benchmark RapidParc on the TractCloud test split, use [RapidParc.test](https://github.com/MedVisBonn/RapidParc/blob/main/src/RapidParc/test.py#L18). The `RapidParc.test` function automatically fetches the TractCloud dataset during evaluation.
 
 #### Example:
 ```python
