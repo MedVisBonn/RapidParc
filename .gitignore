@@ -4,6 +4,7 @@ __pycache__
 pretrained_models/
 trained_models.zip
 trained_models/
+parcellated_tractogram/
 input_tcks/
 output_tcks/
 *.safetensors

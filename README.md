@@ -1,50 +1,88 @@
 # RapidParc
 
-This repository provides RapidParc, a fast, accurate, and lesion-robust transformer-based algorithm for registration-free parcellation of streamlines from diffusion MRI tractography. If you use our model and/or code in your research, please cite the corresponding publication:
-> Justus Bisten, Valentin von Bornhaupt, Johannes Grün, Tobias Bauer, Theodor Rüber, Thomas Schultz; 
-> RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation;   *Imaging Neuroscience* 2026; [doi.org/10.1162/IMAG.a.1168](https://doi.org/10.1162/IMAG.a.1168)
+[![Python 3.12.3](https://img.shields.io/badge/python-3.12.3-blue.svg)](https://www.python.org/)
+[![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg)](https://pytorch.org/)
+[![Paper DOI](https://img.shields.io/badge/DOI-10.1162%2FIMAG.a.1168-brightgreen)](https://doi.org/10.1162/IMAG.a.1168)
+[![License: BSD](https://img.shields.io/badge/License-BSD_3-yellow.svg)](https://github.com/MedVisBonn/RapidParc/blob/main/LICENSE)
+
+RapidParc is a fast, accurate, and lesion-robust transformer-based algorithm for registration-free parcellation of streamlines from diffusion MRI tractography. It assigns one label to each streamline in a tractogram and is designed for efficient large-scale inference.  
+
+If you use this repository, please cite:
+> <u>Justus Bisten</u>, <u>Valentin von Bornhaupt</u>, Johannes Grün, Tobias Bauer, Theodor Rüber, Thomas Schultz.   
+> *RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation.*  
+> *Imaging Neuroscience* (2026).  
+> DOI: [10.1162/IMAG.a.1168](https://doi.org/10.1162/IMAG.a.1168)
+
+## Table of Contents
+- [Problem Description](#problem-description)
+- [Method](#method)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Reproduce Paper Results](#reproducing-results)
+- [Training](#retrain-rapidparc-on-the-tractcloud-train-split)
+- [Known Issues](#known-issues)
+
+# Problem description
+
+Tractogram parcellation assigns anatomical labels to streamlines obtained from diffusion MRI tractography. RapidParc performs this task without anatomical registration and uses a transformer architecture to incorporate global context across streamlines.  
+
+# Method
+
+At inference time, streamlines are shuffled and processed in groups of size `eval_context_size`. This makes it possible to scale to large tractograms while retaining contextual information beyond the individual streamline. The method is registration-free, which is especially useful when anatomical deformation, lesions, or post-surgical alterations reduce the reliability of registration-based pipelines.
+
+**Key Features:**
+- Registration-free inference
+- Fast, parallelized tractogram processing
+- Strong benchmark performance on the TractCloud test split
+- Improved robustness in anatomically altered or lesioned brains
+- Simple usage from both Python and command line
+
+RapidParc predicts one of **43 classes** per streamline, including an outlier class, `Other`.
+
+### Pretrained models:
+| Model | Intended use |
+|--------|---------|
+|`rapidparc` | Default general-purpose model for standard inference. |
+| `hemiaug` |  When your data may contain strong unilateral anatomical changes, lesions, or post-surgical alterations.
+| `rapidparc_v8` | When you want to study the effect of using 8 instead of 15 resampled vertices. |
 
 # Installation
+This project was developed with *PyTorch 2.4* on *Python 3.12.3* and *CUDA 12.4*.
 
-1.  Clone the repository, i.e.
-    ```sh
-    git clone https://github.com/MedVisBonn/RapidParc.git
-    cd RapidParc
-    ``` 
-2. Create a virtual environment, i.e.
-    ```sh
-    python3 -m venv .venv
-    source .venv/bin/activate
-    python3 -m pip install -U pip
-    ```
-3. Install PyTorch. Therefore, go to [pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/) and follow the instructions for your build. For this project, we used *PyTorch 2.9.1*.
-4. Install RapidParc locally
-    ```python
-    python3 -m pip install -e .
-    ```
+### 1. Clone the repository
+```sh
+git clone https://github.com/MedVisBonn/RapidParc.git
+cd RapidParc
+``` 
 
-# Parcellate with RapidParc
+### 2. Create and activate a virtual environment
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -U pip
+```
+### 3. Install PyTorch
+Install PyTorch by following the official instructions: [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)  
 
- This repository has three main entry points: 
- - `run.py`: Parcellate Streamlines
- - `test.py`: Benchmark RapidParc on the TractCloud test split yourself
- - `train.py`: Retrain RapidParc on the TractCloud train split yourself
+### 4. Install RapidParc
+```python
+python3 -m pip install -e .
+```
 
-## Run RapidParc from Python
-To parcellate a tractogram, you can call
+# Quick start
+
+### Python Interface
+
+To parcellate a tractogram in Python:
 ```python
 from RapidParc import RapidParc
+
 predictions = RapidParc(...)
 ```
 
-We published three pre-trained models:
-- `rapidparc` the general purpose model.
-- `hemiaug` the hemispherotomy-stable RapidParc model.
-- `rapidparc_v8` the vanilla model, but each input streamline gets resampled to 8 instead of 15 supporting points per streamline. This model was used during benchmarking.
+The [RapidParc](https://github.com/MedVisBonn/RapidParc/blob/main/run.py#L59) function accepts multiple input-formats like `list`, `torch.Tensor` and `numpy.ndarray`. Input streamlines do not need to have the same number of supporting points. RapidParc resamples them automatically. 
 
-The function [RapidParc](https://github.com/MedVisBonn/RapidParc/blob/main/run.py#L59) accepts multiple input-formats like `list`, `torch.Tensor` and `numpy.ndarray`. The streamlines do not have to have an equal number of supporting points. *RapidParc* resamples them automatically. For more details take a look at the Docstring of the function. 
-
-**Example Call:**
+#### Example:
 ```python
 from RapidParc import RapidParc
 import torch
@@ -65,8 +103,9 @@ predictions = RapidParc(
 print(f"Output shape: {predictions.shape}")
 print(f"Output: {predictions}")
 classes, counts = torch.unique(predictions, return_counts=True)
-print(f"Output summary: {[f'{cl}: {co}' for cl, co in zip(classes, counts)]}")
+print(f"Output summary: {[f'{pred}: {num}' for pred, num in zip(classes, counts)]}")
 ```
+
 ```
 Time to load model: 0.05s
 Time to shuffle data: 0.00s
@@ -79,18 +118,12 @@ Output shape: torch.Size([5000])
 Output: tensor([42, 42, 42,  ..., 42, 42, 42])
 Output summary: ['33: 1', '42: 4999']
 ```
-I.e. our random paths are getting classified as outliers.
+In this example, randomly generated streamlines are mostly classified as outliers, which is expected.
 
-## Run RapidParc from CLI (for `.tck` tractograms)
-If you have saved a tractogram in a `.tck` file, you can use the following wrapper function, which also handles file I/O:
-```python
-from RapidParc import RapidParcTckEval
-RapidParcTckEval(...)
-```
+### Command-line usage (`.tck` tractograms)  
+If your tractogram is stored as a .tck file, you can run parcellation directly from the terminal. Each assigned tract results in a new .tck output file inside the specified directory.
 
-This function can be called via the CLI:
-
-**Example Call:**
+#### Example:
 ```sh
 rapidparc --tck_path tractogram.tck \
  --out_path parcellated_tractogram \
@@ -159,11 +192,18 @@ Total time: 13.28s
 Files saved in parcellated_tractogram/
 ```
 
-# Test RapidParc on the *TractCloud test split*
+The same function is also available from Python:  
+```python
+from RapidParc import RapidParcTckEval
 
-To benchmark RapidParc on the TractCloud test split, use the [test function in test.py](https://github.com/MedVisBonn/RapidParc/blob/main/test.py#L23). 
+RapidParcTckEval(...)
+```
 
-**Example Call:**
+# Reproducing results
+
+To benchmark RapidParc on the TractCloud test split, use [RapidParc.test](https://github.com/MedVisBonn/RapidParc/blob/main/test.py#L23). The `RapidParc.test` function automatically fetches the TractCloud dataset during evaluation.
+
+#### Example:
 ```python
 import RapidParc
 import torch
@@ -172,31 +212,25 @@ acc_43, f1_43 = RapidParc.test(
     model_name_or_path = "rapidparc_v8",
     applyTestSetAugmentations = False,
     eval_batch_size = 128,
-    evaluation_context_size = 2000,
+    eval_context_size = 2000,
     device = torch.device("cpu"),
-    print_classification_report = False
+    print_classification_report = True
 )
 print(f"Accuracy: {100 * acc_43:.2f} %, Macro F1 Score: {100 * f1_43:.2f} %")
 ```
-This prints out a classification report and creates a confusion matrix in `plots/rapidParc_v8`.
-```
-Testing experiment rapidparc_v8 on the test set without augmentations
-Duration: 4.34 seconds
-Accuracy: 94.43 %, Macro F1 Score: 93.26 %
-```
-
-This test function can also be called from CLI.
-```sh
-rapidparc-test -h
-```
+This prints out a classification report and creates a confusion matrix plot in `rapidParc_v8/plots`. You can also execute this via the CLI using `rapidparc-test`.
 
 # Retrain RapidParc on the TractCloud train split
 
-If you want to retrain RapidParc on your own, please take a look at [train.py](https://github.com/MedVisBonn/RapidParc/blob/main/train.py#L25). A minimal run can be started using:
+To retrain RapidParc on the TractCloud training split, a minimal run can be started using:  
+
 ```sh
 rapidparc-train
 ```
 
+A list of all configurable attributes can be obtained from `cli_train.py`. The parameters we used for each model can be found in the .yaml files attached to the GitHub releases.
+
 # Known issues
 
-- If you get bad evaluation results, there might be a flip in the axis of the tractogram. To debug it, you might visualize a TractCloud tractogram (i.e. take one from `utils/dataset.py:getTractCloudDataset`) together with your tractogram.
+- **Orientation Errors:** If evaluation results are unexpectedly poor, your tractogram may have an axis flip or coordinate-system mismatch.
+- **Outlier Class Ratio:** The `Other` class may contain a large fraction of streamlines, especially in whole-brain tractograms. This is often expected and wanted.

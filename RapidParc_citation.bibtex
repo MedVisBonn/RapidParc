@@ -1,0 +1,15 @@
+@article{10.1162/IMAG.a.1168,
+    author = {Bisten, Justus and von Bornhaupt, Valentin and Grün, Johannes and Bauer, Tobias and Rüber, Theodor and Schultz, Thomas},
+    title = {RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation},
+    journal = {Imaging Neuroscience},
+    year = {2026},
+    month = {02},
+    abstract = {Whole-brain diffusion MRI tractography produces tractograms, dense sets of streamlines that represent white matter architecture. Structural connectivity studies and clinical pipelines often involve tractogram parcellation, a process in which each streamline is assigned to an anatomical bundle or identified as a false positive. Recent advances made tractogram parcellation registration-free, considering the computational effort of registration, and the challenges posed by the registration of pathological cases.We introduce RapidParc, a novel transformer-based method for registration-free tractogram parcellation. RapidParc treats each streamline as a token and processes many of them in parallel. This way, they serve as a global context for each other, permitting accurate classification while the high level of parallelism leads to rapid computation. Our design is two orders of magnitude faster than TractCloud, a recent state-of-the-art method for registration-free parcellation, and supports CPU-only inference, while achieving even slightly higher accuracy.Comparing RapidParc to TractCloud in a cohort of 22 individuals post-hemispherotomy and 30 individuals after selective amygdalohippocampectomy (sAH), it generalizes better to structurally altered anatomy, even when trained exclusively on data from healthy controls. This intrinsic robustness is further improved by applying a novel augmentation strategy during training. Finally, we investigate the main factors that contribute to that improved generalization. Our results highlight the importance of robust tractogram centering in registration-free approaches. They also suggest that constructing a local context for each streamline, on which TractCloud spends considerable computational resources, does not appear to contribute to its accuracy.Our code and pretrained models are available from https://github.com/MedVisBonn/RapidParc.},
+    issn = {2837-6056},
+    doi = {10.1162/IMAG.a.1168},
+    url = {https://doi.org/10.1162/IMAG.a.1168},
+    eprint = {https://direct.mit.edu/imag/article-pdf/doi/10.1162/IMAG.a.1168/2582481/imag.a.1168.pdf},
+}
+
+
+
