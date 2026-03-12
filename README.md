@@ -63,7 +63,7 @@ source .venv/bin/activate
 python3 -m pip install -U pip
 ```
 ### 3. Install PyTorch
-Install PyTorch by following the official instructions: [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)  
+Install PyTorch using pip by following the official instructions: [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)  
 
 ### 4. Install RapidParc
 ```python
