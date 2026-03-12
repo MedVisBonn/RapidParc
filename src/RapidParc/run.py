@@ -1,34 +1,30 @@
-import sys
 import os
 from pathlib import Path
 import nibabel as nib
-from typing import Union, List, Tuple
+from nibabel.streamlines.array_sequence import ArraySequence
+from typing import Union, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-torch.set_float32_matmul_precision('high')
 import time
 from tqdm import tqdm
-import argparse
 
-from utils.model import TransformerModel, get_embedding_layer
-from utils.model_snapshot_handling import get_latest_snapshot
-from utils.transforms3D import normalize_to_identity_cube
-from utils.args_from_yaml import load_args_from_yaml
-from utils import tck_io
+from .utils.pypi_package_helper import load_model_and_args_local_or_online, get_mapping_800_800_to_43_online, get_int_to_label_online
+from .utils.transforms3D import normalize_to_identity_cube
+from .utils import tck_io
 
 
 
-def rapidParcTckEval(tck_path: Union[str, os.PathLike],
+def RapidParcTckEval(tck_path: Union[str, os.PathLike],
                      out_path: Union[str, os.PathLike],
-                     model_folder_path: Union[str, os.PathLike],
+                     model_name_or_path: Union[str, os.PathLike],
                      eval_batch_size: int = 512,
                      eval_context_size: int = 2000,
                      device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                      seed: int = 42,
-                     print_time: bool = True):
-    
-    data_tensor, origStreamlines = tck_to_tensor(tck_path=tck_path)
+                     print_time: bool = True,
+                     print_class_distribution: bool = True):  
+    loaded_streamlines = load_tcks(tck_path=tck_path, verbose=print_time)
     if torch.cuda.is_available():
         device = torch.device("cuda")
     elif torch.backends.mps.is_available():
@@ -36,43 +32,46 @@ def rapidParcTckEval(tck_path: Union[str, os.PathLike],
     else:
         device = torch.device("cpu")
     
-    y_pred_43 = rapidParc(model_folder_path = model_folder_path,
-                          inputTractogram = data_tensor,
+    y_pred_43 = RapidParc(model_name_or_path = model_name_or_path,
+                          inputTractogram = loaded_streamlines,
                           eval_batch_size=eval_batch_size,
                           eval_context_size=eval_context_size,
                           return_anatomical_clusters=True,
                           return_label_names=False,
                           device=device,
                           seed=seed,
-                          print_time=print_time)
+                          print_time=print_time,
+                          print_class_distribution=print_class_distribution)
     
-    int_to_label = np.load("utils/int_to_label.npy")
+    int_to_label = get_int_to_label_online()
 
-    results_to_tck(origStreamlines=origStreamlines, 
+    results_to_tck(origStreamlines=loaded_streamlines, 
                    y_pred_43=y_pred_43, 
                    int_to_label=int_to_label,
                    output_path=out_path)
     
 
 
-
-def rapidParc(model_folder_path: Union[str, os.PathLike],
-              inputTractogram: Union[list, torch.Tensor, np.ndarray],
+def RapidParc(model_name_or_path: Union[str, os.PathLike],
+              inputTractogram: Union[list, torch.Tensor, np.ndarray, ArraySequence],
               eval_batch_size: int = 512,
               eval_context_size: int = 2000,
               return_anatomical_clusters: bool = True,
               return_label_names: bool = False,
               device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
               seed: int = 42,
-              print_time: bool = True) -> Union[torch.Tensor, np.ndarray]:
+              print_time: bool = False,
+              print_class_distribution: bool = False) -> Union[torch.Tensor, np.ndarray]:
     """
     Main evaluation function.
 
     Parameters:
         model_folder_path (PathLike | str):
-            Folder of the training run. Should contain a "model"-subfolder
+            One of the following:
+            A pretrained model, i.e. one of "rapidparc", "rapidparc_v8" or "hemiaug"
+            Or a path of an experiment run (i.e. a folder of the `pretrained_models` folder after training)
 
-        inputTractogram (list | Tensor | ndarray):
+        inputTractogram (list | Tensor | ndarray | ArraySequence):
             The streamlines of a single tractogram. Assumed to be one of the following: 
             NumPy Array of length numStreamlines, where each entry has shape [n_i, 3]
             NumPy Array of shape [numStreamlines, lenStreamline, 3] where lenStreamline >= 15
@@ -104,38 +103,50 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
         print_time (bool):
             Whether the time measurements should be printed.
 
+        print_class_distribution (bool):
+            Whether the class distribution should be printed to command line.
+
     Returns:
         y_pred (Tensor | ndarray):
             Class predictions in the domain of the 42+1 anatomical regions, 800+800 (ORG atlas) or anatomical cluster names.
     """
-    
+
+    torch.set_float32_matmul_precision('high')
     time_start = time.time()
-    _, model = load_args_and_model(run_path=Path(model_folder_path), device=device)
+    model, args = load_model_and_args_local_or_online(name_or_path=model_name_or_path, device=device)
+    n_vertices = getattr(args, "n_vertices", None)
+    if n_vertices is None:
+        n_vertices = getattr(args, "num_support_points_per_streamline", None)
+    if n_vertices is None:
+        raise AttributeError(
+            "Configuration is missing 'n_vertices'. Please add it to args.yaml or provide "
+            "'num_support_points_per_streamline'."
+        )
     if print_time: print(f"Time to load model: {time.time() - time_start:.2f}s")
     
     # Load Mappings
-    mapping_800_800_to_43 = torch.from_numpy(np.load("utils/mapping_from_800_800_to_43.npy")).to(device)
-    int_to_label = np.load("utils/int_to_label.npy")
+    mapping_800_800_to_43 = get_mapping_800_800_to_43_online().to(device)
+    int_to_label = get_int_to_label_online()
 
-    # Resample Streamlines to 15 supporting points if necessary and change datatype to torch.Tensor
+    # Resample Streamlines to n_vertices supporting points if necessary and change datatype to torch.Tensor
     if isinstance(inputTractogram, np.ndarray):
-        if inputTractogram.dtype == object or inputTractogram.shape[-1] != 15:
-            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
+        if inputTractogram.dtype == object or inputTractogram.shape[-1] != n_vertices:
+            data_tensor, origStreamlines = resample_number_supporting_points(input_streamlines=inputTractogram, n_vertices=n_vertices, verbose=print_time)
         else:
             origStreamlines = inputTractogram
             data_tensor = torch.from_numpy(inputTractogram).pin_memory()
     elif isinstance(inputTractogram, torch.Tensor):
-        if inputTractogram.size(-2) == 15:
+        if inputTractogram.size(-2) == n_vertices:
             origStreamlines = inputTractogram
-            data_tensor = inputTractogram.pin_memory()
+            data_tensor = inputTractogram
         else:
-            data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
-    elif isinstance(inputTractogram, list) or isinstance(inputTractogram, nib.streamlines.array_sequence.ArraySequence):
-        data_tensor, origStreamlines = resample_number_supporting_points_to_15(input_streamlines=inputTractogram, verbose=print_time)
+            data_tensor, origStreamlines = resample_number_supporting_points(input_streamlines=inputTractogram, n_vertices=n_vertices, verbose=print_time)
+    elif isinstance(inputTractogram, list) or isinstance(inputTractogram, ArraySequence):
+        data_tensor, origStreamlines = resample_number_supporting_points(input_streamlines=inputTractogram, n_vertices=n_vertices, verbose=print_time)
     else:
         raise ValueError(f"inputTractogram has to be a list, numpy.ndarray or torch.Tensor, but got {type(inputTractogram)}.")
    
-    assert data_tensor.shape[1] == 15 and data_tensor.shape[2] == 3 and len(data_tensor.shape) == 3, "Assumed the input tensor to have a format of [numStreamlines, 15, 3]"
+    assert data_tensor.shape[1] == n_vertices and data_tensor.shape[2] == 3 and len(data_tensor.shape) == 3, "Assumed the input tensor to have a format of [numStreamlines, n_vertices, 3]"
 
     # Normalize Streamlines to the [-1, 1] cube
     data_tensor = normalize_to_identity_cube(data_tensor.unsqueeze(0)).squeeze(0)
@@ -169,45 +180,54 @@ def rapidParc(model_folder_path: Union[str, os.PathLike],
     # Undo the permutation
     y_pred = y_pred[torch.argsort(permutation_indeces)]
 
-    if print_time: print(f"Total time: {time.time() - time_start:.2f}s")
+    ## Create Histogram
+    if print_class_distribution:
+        print_command_line_bar_plot(y_pred=y_pred.numpy(), int_to_label=int_to_label)
+
+    if print_time: 
+        print(f"Total time: {time.time() - time_start:.2f}s")
     
     if return_anatomical_clusters and return_label_names:
         return int_to_label[y_pred.numpy()]
     return y_pred
 
 
+
 @torch.inference_mode()
-def resample_number_supporting_points_to_15(input_streamlines: Union[list, np.ndarray, torch.Tensor], verbose: bool = False) -> Tuple[torch.Tensor, np.ndarray]:
+def resample_number_supporting_points(input_streamlines: Union[list, np.ndarray, torch.Tensor], 
+                                      n_vertices: int,
+                                      verbose: bool = False) -> Tuple[torch.Tensor, np.ndarray]:
     """
-    Function that resamples the number of supporting points to 15.
+    Function that resamples the number of supporting points (n_vertices).
 
     Args:
         input_streamlines (list): List of streamlines. Each streamline is a numpy array of shape [N_i, 3].
         verbose (bool): If True, print the time it took to shorten the streamlines.
 
     Returns:
-        resampled_streamlines (torch.Tensor): The resampled streamlines. Shape [N, 15, 3].
+        resampled_streamlines (torch.Tensor): The resampled streamlines. Shape [N, n_vertices, 3].
         origStreamlines (np.ndarray): The original streamlines as a numpy array object (for slicing operations).
     """
     time_to_shorten_streamlines = time.time()
 
     origStreamlines = []
     resampled_streamlines = []
-    # Select all Streamlines with length ≥ 15
+    # Select all Streamlines with length ≥ n_vertices
     for i, streamline in enumerate(input_streamlines):
-        if len(streamline) < 15:
-            print(f"""Streamline at index {i} has a length {len(streamline)}, which is less than 15.
+        if len(streamline) < n_vertices:
+            print(f"""Streamline at index {i} has a length {len(streamline)}, which is less than {n_vertices}.
                   As a result, the classification result might be faulty. 
-                  Make sure to use streamlines with at least 15 supporting points and that the shape
+                  Make sure to use streamlines with at least {n_vertices} supporting points and that the shape
                   of each streamline is [N_i, 3].""")
         assert len(streamline[0]) == 3, f"Streamline at index {i} has a shape {streamline[0].shape}, but assumed [N, 3]."
         origStreamlines.append(streamline)
-        indices = np.round(np.linspace(start=0, stop=len(streamline) - 1, num=15)).astype(int)
+        indices = np.round(np.linspace(start=0, stop=len(streamline) - 1, num=n_vertices)).astype(int)
         selected_points = streamline[indices]
         resampled_streamlines.append(selected_points)
-    resampled_streamlines = torch.from_numpy(np.array(resampled_streamlines)).pin_memory() # Shape [N, 15, 3]
+    resampled_streamlines = torch.from_numpy(np.array(resampled_streamlines)) # Shape [N, n_vertices, 3]
     if verbose: print(f"Time to shorten streamlines: {time.time() - time_to_shorten_streamlines:.2f}s")
     return resampled_streamlines, np.array(origStreamlines, dtype=object)
+
 
 
 @torch.inference_mode()
@@ -254,7 +274,7 @@ def model_forward_pass(model: nn.Module,
         model: The model to be evaluated.
         eval_batch_size: The batch size for the evaluation.
         device: The device on which the model is evaluated.
-        data_tensor: The input data tensor (CPU). It is already normalized to the [-1,1] cube, Shape [N, context_size, 15, 3]
+        data_tensor: The input data tensor (CPU). It is already normalized to the [-1,1] cube, Shape [N, context_size, n_vertices, 3]
     Returns:
         output_tensor: The output tensor (CPU) of the model.
     """
@@ -279,67 +299,29 @@ def model_forward_pass(model: nn.Module,
 
 
 
-def load_args_and_model(run_path: Union[Path, str], device: torch.device):
-    run_path = Path(run_path)
-    args = load_args_from_yaml(run_path / "args" / "args.yml")
-
-    # Load Embedding
-    embedding = get_embedding_layer(num_support_points_per_streamline=args.num_support_points_per_streamline, 
-                                       d_model=args.d_model)
-
-    # Load Model w.r.t. that config
-    model = TransformerModel(num_layers=args.num_layers, 
-                            d_model=args.d_model,
-                            nhead=args.nhead,
-                            dim_feedforward=args.dim_feedforward,
-                            dropout=args.dropout,
-                            embedding_layer=embedding,
-                            dim_class_hidden=args.dim_class_hidden,
-                            dim_out=args.dim_out)
-    model = model.to(device)
-    model = nn.DataParallel(model)
-    latestModel = get_latest_snapshot(run_path / "model")
-    if latestModel is None:
-        raise ValueError(f"The Path {run_path} does not contain a model to evaluate")
-    checkpoint = torch.load(latestModel, weights_only=True, map_location=device)
-    model.load_state_dict(checkpoint['model'])
-    model = model.module
-
-    return args, model
-
-
-def tck_to_tensor(tck_path: Union[os.PathLike, str]) -> Tuple[torch.Tensor, np.ndarray]:
+def load_tcks(tck_path: Union[os.PathLike, str], verbose: bool) -> ArraySequence:
     """
     Function that reads a tck file.
     Args:
         tck_path: Path to the tck file.
+        verbose: Whether timings should be printed 
     Returns:
-        shortened_streamlines: A tensor of shape (N, 15, 3) where N is the number of streamlines in the tck file.
-        origStreamlines: A list of numpy arrays where each numpy array is a streamline from the tck file.
+        loaded_streamlines: streamlines loaded as an ArraySequence object
     """
     tck_path = Path(tck_path)
+    assert tck_path.exists(), f"File {tck_path} does not exist."
     assert tck_path.suffix == ".tck", f"The file {tck_path} is not a '.tck' file."
     # Load Streamlines from tck file using nibabel
     time_to_load_tck = time.time()
     tractogram = nib.streamlines.load(tck_path)
     loaded_streamlines = tractogram.streamlines
-    print(f"Time to load tck file with {len(loaded_streamlines)}: {time.time() - time_to_load_tck:.2f}s")
-    time_to_shorten_streamlines = time.time()
-    origStreamlines = []
-    shortened_streamlines = []
-    # Select all Streamlines with length ≥ 15
-    for streamline in loaded_streamlines:
-        origStreamlines.append(streamline)
-        indices = np.round(np.linspace(start=0, stop=len(streamline) - 1, num=15)).astype(int)
-        selected_points = streamline[indices]
-        shortened_streamlines.append(selected_points)
-    shortened_streamlines = torch.from_numpy(np.array(shortened_streamlines)).pin_memory() # Shape [N, 15, 3]
-    print(f"Time to shorten streamlines: {time.time() - time_to_shorten_streamlines:.2f}s")
-    return shortened_streamlines, np.array(origStreamlines, dtype=object)
+    if verbose:
+        print(f"Time to load tck file with {len(loaded_streamlines)} streamlines: {time.time() - time_to_load_tck:.2f}s")
+    return loaded_streamlines
 
 
 
-def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray], 
+def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray, ArraySequence], 
                    y_pred_43: torch.Tensor, 
                    int_to_label: np.ndarray, 
                    output_path: Union[os.PathLike, str]):
@@ -353,7 +335,7 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
     assert len(origStreamlines) == len(y_pred_43), "The number of streamlines and the number of predictions do not match."
     # Create a new tractogram
     output_path = Path(output_path)
-    y_pred_43_np = y_pred_43.numpy()
+    y_pred = y_pred_43.numpy()
     if not output_path.exists():
         output_path.mkdir(parents=True)
     tcks = [tck_io.Tck(output_path / f"{label}.tck") for label in int_to_label]
@@ -361,8 +343,7 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
         tck.force = True  # Force overwrite if the file already exists
     [tck.write({}) for tck in tcks]
     for k in range(len(int_to_label)):
-        to_save = origStreamlines[y_pred_43_np == k]
-        print(f"Number of streamlines in {int_to_label[k]}: {len(to_save)}")
+        to_save = origStreamlines[y_pred == k]
         if len(to_save) > 0:
             to_save = np.ascontiguousarray(np.vstack([np.vstack([s, np.array([np.nan]*3)]) for s in to_save]), dtype='<f4')
             with open(output_path / f"{int_to_label[k]}.tck", "ab") as f:
@@ -371,24 +352,27 @@ def results_to_tck(origStreamlines: Union[list, torch.Tensor, np.ndarray],
         tck.close()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate a trained rapidParc model on a tck file.")
-    parser.add_argument("--tck_path", type=str, required=True, help="Path to the input tck file.")
-    parser.add_argument("--out_path", type=str, default="output_tcks", help="Path to the output folder, where the resulting tck files will be stored. If the folder does not exist, it will be created.")
-    parser.add_argument("--model_folder_path", type=str, required=True, help="Path to the folder containing the trained model and the args.yml file.")
-    parser.add_argument("--eval_batch_size", type=int, default=512, help="Batch size for evaluation.")
-    parser.add_argument("--eval_context_size", type=int, default=2000, help="Context size for evaluation.")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use for evaluation.")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
-    parser.add_argument("--print_time", action="store_true", help="Whether to print time measurements.")
-    args = parser.parse_args()
+def print_command_line_bar_plot(y_pred: np.ndarray, int_to_label: np.ndarray):
+    import math
+    BLUE = "\033[34m"
+    RESET = "\033[0m"
+    MAX_LINE_WIDTH = 50
 
-    rapidParcTckEval(tck_path=args.tck_path,
-                     out_path=args.out_path,
-                     model_folder_path=args.model_folder_path,
-                     eval_batch_size=args.eval_batch_size,
-                     eval_context_size=args.eval_context_size,
-                     seed=args.seed,
-                     device=torch.device(args.device),
-                     print_time=args.print_time)
+    counts, _ = np.histogram(y_pred, bins=43, range=(0, 42))
+    max_number_digits = math.ceil(np.log(max(counts)+1) / np.log(10)) +1
+    max_count = counts[:42].max()
+
+    print(BLUE + "Class distribution" + RESET)
+    print(BLUE + f"{"Class".center(2+15)} | Count" + RESET)
+
+    for i, count in enumerate(counts[:42]):
+        bar_len = math.ceil(count / max_count * MAX_LINE_WIDTH) 
+        bar = "▇" * bar_len
+        bin_label = int_to_label[i].ljust(15," ")
+        print(BLUE + f"{str(i).rjust(2, " ")} {bin_label} {("("+str(count)).rjust(max_number_digits, " ") }) {bar}" + RESET)
     
+    # Outlier Class
+    bar_len = min(math.ceil(counts[-1] / max_count * MAX_LINE_WIDTH), MAX_LINE_WIDTH+1)
+    bar = "#" * bar_len if math.ceil(counts[-1] / max_count * MAX_LINE_WIDTH) > MAX_LINE_WIDTH else "▇" * bar_len
+    bin_label = "Outlier 'Other'".ljust(15," ")
+    print(BLUE + f"{str(42).rjust(2, " ")} {bin_label} {("("+str(counts[-1])).rjust(max_number_digits, " ") }) {bar}" + RESET)

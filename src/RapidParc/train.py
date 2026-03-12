@@ -1,6 +1,5 @@
 import os 
 import sys
-import argparse
 import yaml
 from pathlib import Path
 import torch
@@ -8,77 +7,17 @@ import torch.nn as nn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.elastic.multiprocessing.errors import record
-import numpy as np
-from datetime import datetime
 from typing import Union
 
-from utils.dataset import get_TractCloud_train_returner, get_TractCloud_eval_returner, get_mapping_from_800_800_to_43, get_int_to_label
-from utils.model import TransformerModel, get_embedding_layer
-from utils.trainer import train
-from utils.visualizations import create_confusion_matrix
-from utils.transforms3D import RandomNoiseBatch, Rotate3DBatch_UnifDist, RandomNoisedNormalizeToIdentetyCube
-from utils.ddp_handling import ddp_setup, ddp_cleanup, ddp_is_running
-from utils.args_from_yaml import load_args_from_yaml
-from test import test
+from .utils.dataset import get_TractCloud_train_returner, get_TractCloud_eval_returner, get_mapping_from_800_800_to_43, get_int_to_label
+from .utils.model import TransformerModel, get_embedding_layer
+from .utils.trainer import train as _train
+from .utils.visualizations import create_confusion_matrix
+from .utils.transforms3D import RandomNoiseBatch, Rotate3DBatch_UnifDist, RandomNoisedNormalizeToIdentetyCube
+from .utils.ddp_handling import ddp_setup, ddp_cleanup, ddp_is_running
+from .utils.pypi_package_helper import get_tractCloud_dataset_path
+from .test import test
 
-
-def parse_args():
-
-    parser = argparse.ArgumentParser(description="Argument parser for streamline classification")
-    job_id = os.environ.get("WANDB_RUN_ID", None)
-    if job_id is None:
-        job_id = os.environ.get("SLURM_JOB_ID", default=str(datetime.today().strftime('%Y-%m-%d_%H:%M:%S')))
-    
-
-    # learning_params
-    parser.add_argument("--slurm_job_id", type=str, default=job_id, help="SLURM_JOB_ID important for restarts")
-    parser.add_argument("--use_ddp", type=bool, default=False, help="If the elastic distributed backend should be used")
-    parser.add_argument("--num_epochs", type=int, default=1, help="Number of epochs")
-    parser.add_argument("--context_size", type=int, default=2000, help="Context size")
-    parser.add_argument("--lr", type=float, default=5e-4, help="Learning rate")
-    parser.add_argument("--global_batch_size", type=int, default=8, help="Resulting global batch size after DDP")
-    parser.add_argument("--snapshot_every", type=int, default=1000, help="Save snapshot every n epochs")
-    parser.add_argument("--store_all_snapshots", type=bool, default=True, help="Store all snapshots")
-
-    # model Params
-    parser.add_argument("--embedding_type", type=str, default="flip_aug", help="Can be 'flip_inv' or 'flip_aug'")
-    parser.add_argument("--num_layers", type=int, default=1, help="Number of layers")
-    parser.add_argument("--d_model", type=int, default=45, help="Model dimension, at least 66 for flip-inv or 45 for flip-aug")
-    parser.add_argument("--nhead", type=int, default=1, help="Number of attention heads")
-    parser.add_argument("--dim_feedforward", type=int, default=32, help="Feedforward dimension of the transformer")
-    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout rate")
-    parser.add_argument("--dim_class_hidden", type=int, default=256, help="Hidden dimension for classification")
-
-    # Data Augmentation
-    parser.add_argument("--aug_rotate_unif_x", type=list, default=[-45, 45], help="Rotation uniform distribution of x-axis in degrees")
-    parser.add_argument("--aug_rotate_unif_y", type=list, default=[-10, 10], help="Rotation uniform distribution of y-axis in degrees")
-    parser.add_argument("--aug_rotate_unif_z", type=list, default=[-10, 10], help="Rotation uniform distribution of z-axis in degrees")
-    parser.add_argument("--aug_norm_shift_std", type=float, default=0.01, help="Standard deviation of the shift parameter of normalizing layer")
-    parser.add_argument("--aug_norm_scale_std", type=float, default=0.01, help="Standard deviation of the scale parameter of normalizing layer")
-    parser.add_argument("--aug_noise_sigma", type=float, default=0.001, help="Standard deviation of noise")
-    parser.add_argument("--aug_p_hemi", type=float, default=0.3, help="Probability for sampling subtractogram from a single hemisphere")
-    parser.add_argument("--aug_method_hemi", type=str, default='random', help="Method for augmenting with a subtractogram hemisphere")
-
-    # Downsampling for limits on input data
-    parser.add_argument("--n_vertices", type=int, default=15, help="Sample to this number of vertices per streamline.")
-
-    # Pathing
-    parser.add_argument("--out_dir", type=str, default="pretrained_models",help="Output directory for the experiment")
-    parser.add_argument("--in_dir", type=str, default="TractCloud_Dataset/TrainData_800clu800ol", help="Input directory")
-
-
-    args = parser.parse_args()
-
-    assert args.n_vertices >= 2, "n_vertices must be at least 2"
-    assert args.n_vertices <= 15, "n_vertices must be at most 15, this is the maximum resolution of the data provided in TractCloud dataset"
-
-    # Constants:
-    args.dim_out = 1600 # 43
-    args.sched_args = {
-        "scheduler": "CosineAnnealingLR",
-        "eta_min": 0.0 # args.lr / 5000
-    }
-    return args
 
 
 def create__output_folders(output_folder_name: Union[str, os.PathLike], subfolders: list = ["model", "args", "slurm", "plots"]):
@@ -91,8 +30,16 @@ def create__output_folders(output_folder_name: Union[str, os.PathLike], subfolde
 
 
 @record
-def main(args) -> None:
+def train(args) -> None: 
+    """
+    Training function to retrain RapidParc.
     
+    Parameters:
+        - args data object:
+            For definition of the args-Object, take a look at `cli_train.py`
+            If you want to call this function from python, you may define args as a dataclass instance.
+    """
+
     torch.set_float32_matmul_precision('high')
     if args.use_ddp:   
         ddp_setup()
@@ -118,7 +65,7 @@ def main(args) -> None:
     output_folder = output_folder / args.slurm_job_id
 
     # Load Dataloaders
-    data_path = Path(args.in_dir).absolute() 
+    data_path = get_tractCloud_dataset_path(consent_given=args.tractcloud_licence_consent_given) 
     get_train_Tensor = get_TractCloud_train_returner(
         inputPath=data_path,
         device=device,
@@ -179,11 +126,11 @@ def main(args) -> None:
     
     # Store args
     if not ddp_is_running() or dist.get_rank() == 0:
-        with open(str(Path(output_folder) / 'args' / 'args.yml'), 'w') as outfile:
+        with open(str(Path(output_folder) / 'args' / 'args.yaml'), 'w') as outfile:
             yaml.dump(vars(args), outfile, default_flow_style=False, sort_keys=False)
 
     # Training
-    model = train(
+    model = _train(
         get_train_Tensor=get_train_Tensor,
         get_val_Tensor=get_val_Tensor,
         num_epochs=args.num_epochs,
@@ -224,20 +171,18 @@ def main(args) -> None:
 
         
         accuracy_STA, macro_f1_score_STA = test(
-            experiment_path = output_folder, 
-            tractCloudDatasetPath=data_path,
+            model_name_or_path = output_folder, 
             applyTestSetAugmentations=True,
             eval_batch_size=8, 
-            evaluation_context_size=2000, 
+            eval_context_size=2000, 
             device=device,
             print_classification_report=False)
         
         accuracy, macro_f1_score = test(
-            experiment_path = output_folder, 
-            tractCloudDatasetPath=data_path,
+            model_name_or_path = output_folder, 
             applyTestSetAugmentations=False,
             eval_batch_size=8, 
-            evaluation_context_size=2000, 
+            eval_context_size=2000, 
             device=device,
             print_classification_report=False)
 
@@ -249,8 +194,3 @@ def main(args) -> None:
         sys.stdout.flush()
         dist.barrier()
         ddp_cleanup()
-
-
-
-if __name__ == '__main__':
-    main(args = parse_args())
