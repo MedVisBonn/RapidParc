@@ -1,9 +1,11 @@
 # RapidParc
 
-[![Python 3.12.3](https://img.shields.io/badge/python-3.12.3-blue.svg)](https://www.python.org/)
-[![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg)](https://pytorch.org/)
+[![Github Repository](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/MedVisBonn/RapidParc)
+[![PyPI version](https://img.shields.io/pypi/v/RapidParc.svg?color=blue)](https://pypi.org/project/RapidParc/)
 [![Paper DOI](https://img.shields.io/badge/DOI-10.1162%2FIMAG.a.1168-brightgreen)](https://doi.org/10.1162/IMAG.a.1168)
-[![License: BSD](https://img.shields.io/badge/License-BSD_3-yellow.svg)](https://github.com/MedVisBonn/RapidParc/blob/main/LICENSE)
+[![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg)](https://pytorch.org/)
+[![License](https://img.shields.io/github/license/MedVisBonn/RapidParc.svg?color=yellow)](https://github.com/MedVisBonn/RapidParc/blob/main/LICENSE)
+<!-- [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/) -->
 
 RapidParc is a fast, accurate, and lesion-robust transformer-based algorithm for registration-free parcellation of streamlines from diffusion MRI tractography. It assigns one label to each streamline in a tractogram and is designed for efficient large-scale inference.  
 
@@ -29,7 +31,7 @@ Tractogram parcellation assigns anatomical labels to streamlines obtained from d
 # Method
 At inference time, streamlines are shuffled and processed in groups of size `eval_context_size`. This makes it possible to scale to large tractograms while retaining contextual information beyond the individual streamline. The method is registration-free, which is especially useful when anatomical deformation, lesions, or post-surgical alterations reduce the reliability of registration-based pipelines.
 
-![Method during inference - overview](plots/for_readme_plots/method_inference.png)
+![Method during inference - overview](plots/for_readme_plots/method_inference.webp)  
 
 **Key Features:**
 - Registration-free inference
@@ -60,7 +62,7 @@ Install PyTorch using pip by following the official instructions: [https://pytor
 
 ### 3. Install RapidParc
 ```sh
-pip install RapidParc@git+https://github.com/MedVisBonn/RapidParc
+pip install RapidParc
 ```
 
 # Quick start
