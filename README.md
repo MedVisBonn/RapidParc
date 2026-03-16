@@ -1,7 +1,7 @@
 # RapidParc
 
 [![Github Repository](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/MedVisBonn/RapidParc)
-[![PyPI version](https://img.shields.io/pypi/v/RapidParc.svg)](https://pypi.org/project/RapidParc/)
+[![PyPI - RapidParc](https://img.shields.io/pypi/v/RapidParc.svg?logo=pypi&label=PyPI)](https://pypi.org/project/RapidParc/)
 [![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg?logo=pytorch)](https://pytorch.org/)
 [![Paper DOI](https://img.shields.io/badge/DOI-10.1162%2FIMAG.a.1168-brightgreen)](https://doi.org/10.1162/IMAG.a.1168)
 [![License](https://img.shields.io/github/license/MedVisBonn/RapidParc.svg?color=yellow)](https://github.com/MedVisBonn/RapidParc/blob/main/LICENSE)
