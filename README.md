@@ -10,7 +10,7 @@
 RapidParc is a fast, accurate, and lesion-robust transformer-based algorithm for registration-free parcellation of streamlines from diffusion MRI tractography. It assigns one label to each streamline in a tractogram and is designed for efficient large-scale inference.  
 
 If you use this repository, please cite:
-> <u>Justus Bisten</u>, <u>Valentin von Bornhaupt</u>, Johannes Grün, Tobias Bauer, Theodor Rüber, Thomas Schultz.   
+> <ins>Justus Bisten</ins>, <ins>Valentin von Bornhaupt</ins>, Johannes Grün, Tobias Bauer, Theodor Rüber, Thomas Schultz.   
 > *RapidParc: A Global-Context Transformer for Parallel, Accurate, and Lesion-Robust Tractogram Parcellation.*  
 > *Imaging Neuroscience* (2026).  
 > DOI: [10.1162/IMAG.a.1168](https://doi.org/10.1162/IMAG.a.1168)
@@ -225,3 +225,6 @@ A list of all configurable attributes can be obtained from `cli_train.py`. The p
 
 - **Orientation Errors:** If evaluation results are unexpectedly poor, your tractogram may have an axis flip or coordinate-system mismatch.
 - **Outlier Class Ratio:** The `Other` class may contain a large fraction of streamlines, especially in whole-brain tractograms. This is often expected and wanted.
+- **PyTorch ImportError:** For using this package, you have to install PyTorch. Please visit [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/) and install PyTorch by following the official instructions.
+
+If you encounter any problems using this package, please do not hesitate to create a GitHub issue.
