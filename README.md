@@ -50,18 +50,12 @@ RapidParc predicts one of **43 classes** per streamline, including an outlier cl
 | `rapidparc_v8` | When you want to study the effect of using 8 instead of 15 resampled vertices. |
 
 # Installation
-This project was developed with *PyTorch 2.4* on *Python 3.12.3* and *CUDA 12.4*.
+This project was developed with *PyTorch 2.4* on *Python 3.12.3* and *CUDA 12.4*. 
 
-### 1. (optional, recommended) Create and activate a virtual environment
-```sh
-python3 -m venv .venv 
-source .venv/bin/activate
-pip install -U pip
-```
-### 2. Install PyTorch
-Install PyTorch using pip by following the official instructions: [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)  
+**1. Install PyTorch**  
+Visit [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/) and install PyTorch by following the official instructions
 
-### 3. Install RapidParc
+**2. Install RapidParc**
 ```sh
 pip install RapidParc
 ```
