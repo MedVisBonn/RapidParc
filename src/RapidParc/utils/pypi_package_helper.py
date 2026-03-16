@@ -168,7 +168,8 @@ def get_tractCloud_dataset_path(consent_given: bool = False) -> Path:
             consent_given = True
         elif answer in ("n", "no"):
             raise PermissionError("Download aborted: License agreement not accepted.")
-        print("Invalid input. Please answer with 'y' or 'n'.")
+        else:
+            print("Invalid input. Please answer with 'y' or 'n'.")
 
     # Run download:
     tar_url = "https://github.com/SlicerDMRI/TractCloud/releases/download/v1.0.0/TrainData_800clu800ol.tar.gz"

@@ -50,24 +50,17 @@ RapidParc predicts one of **43 classes** per streamline, including an outlier cl
 # Installation
 This project was developed with *PyTorch 2.4* on *Python 3.12.3* and *CUDA 12.4*.
 
-### 1. Clone the repository
+### 1. (optional, recommended) Create and activate a virtual environment
 ```sh
-git clone https://github.com/MedVisBonn/RapidParc.git
-cd RapidParc
-``` 
-
-### 2. Create and activate a virtual environment
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -U pip
+python -m venv .venv && source .venv/bin/activate
+pip install -U pip
 ```
-### 3. Install PyTorch
+### 2. Install PyTorch
 Install PyTorch using pip by following the official instructions: [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)  
 
-### 4. Install RapidParc
-```python
-python3 -m pip install .
+### 3. Install RapidParc
+```sh
+pip install RapidParc@git+https://github.com/MedVisBonn/RapidParc
 ```
 
 # Quick start
