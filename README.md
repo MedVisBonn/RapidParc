@@ -1,9 +1,9 @@
 # RapidParc
 
 [![Github Repository](https://img.shields.io/badge/GitHub-181717?logo=github)](https://github.com/MedVisBonn/RapidParc)
-[![PyPI version](https://img.shields.io/pypi/v/RapidParc.svg?color=blue)](https://pypi.org/project/RapidParc/)
+[![PyPI version](https://img.shields.io/pypi/v/RapidParc.svg)](https://pypi.org/project/RapidParc/)
+[![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg?logo=pytorch)](https://pytorch.org/)
 [![Paper DOI](https://img.shields.io/badge/DOI-10.1162%2FIMAG.a.1168-brightgreen)](https://doi.org/10.1162/IMAG.a.1168)
-[![PyTorch 2.4](https://img.shields.io/badge/PyTorch-2.4-EE4C2C.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/github/license/MedVisBonn/RapidParc.svg?color=yellow)](https://github.com/MedVisBonn/RapidParc/blob/main/LICENSE)
 <!-- [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/) -->
 
@@ -31,7 +31,7 @@ Tractogram parcellation assigns anatomical labels to streamlines obtained from d
 # Method
 At inference time, streamlines are shuffled and processed in groups of size `eval_context_size`. This makes it possible to scale to large tractograms while retaining contextual information beyond the individual streamline. The method is registration-free, which is especially useful when anatomical deformation, lesions, or post-surgical alterations reduce the reliability of registration-based pipelines.
 
-![Method during inference - overview](plots/for_readme_plots/method_inference.webp)  
+![Method during inference - overview](https://raw.githubusercontent.com/MedVisBonn/RapidParc/main/plots/for_readme_plots/method_inference.webp)  
 
 **Key Features:**
 - Registration-free inference
@@ -54,7 +54,8 @@ This project was developed with *PyTorch 2.4* on *Python 3.12.3* and *CUDA 12.4*
 
 ### 1. (optional, recommended) Create and activate a virtual environment
 ```sh
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv 
+source .venv/bin/activate
 pip install -U pip
 ```
 ### 2. Install PyTorch

@@ -7,7 +7,7 @@ packages = ["src/RapidParc"]
 
 [project]
 name = "RapidParc"
-version = "1.0.0"
+version = "1.0.2"
 description = "Rapid registration-free tractogram parcellation using global context"
 readme = "README.md"
 requires-python = ">=3.9"
