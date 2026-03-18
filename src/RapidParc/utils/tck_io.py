@@ -1,7 +1,6 @@
 import os
 from datetime import datetime
 import numpy as np
-# from concurrent.futures import ThreadPoolExecutor
 header = [b'mrtrix tracks\n', b'count: 0000000000\n', b'datatype: Float32LE\n', b'file: . offset\n']
 
    
