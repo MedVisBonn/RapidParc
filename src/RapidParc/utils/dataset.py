@@ -101,7 +101,7 @@ def get_TractCloud_eval_returner(inputPath: Union[str, os.PathLike],
                 The device for the train set
             
             eval_context_size:
-                The constext size used for evaluation
+                The context size used for evaluation
 
             seed (int, default 42):
                 The random seed used for permuting the validation tractograms.

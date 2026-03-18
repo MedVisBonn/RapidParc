@@ -30,7 +30,7 @@ HASHES = {
 
 def load_model_and_args_local_or_online(name_or_path: Union[str, os.PathLike], device: torch.device):
     if not isinstance(name_or_path, str) and not isinstance(name_or_path, os.PathLike):
-        raise ValueError('Expected varaible name_or_path to be either one of "rapidparc", "rapidparc_v8" and "hemiaug"'\
+        raise ValueError('Expected variable name_or_path to be either one of "rapidparc", "rapidparc_v8" and "hemiaug"'\
                          +f'or to be an experiment path (containing model and args.yaml), but got {name_or_path}')
     if isinstance(name_or_path, str) and name_or_path in PRETRAINED_MODELS:
         ########## download args and model from Github ##########
@@ -84,7 +84,7 @@ def load_model_and_args_local_or_online(name_or_path: Union[str, os.PathLike], d
     
     # Load Model from local folder:
     experiment_path = Path(name_or_path)
-    assert experiment_path.is_dir(), f"The directiory {experiment_path} does not exist but should."
+    assert experiment_path.is_dir(), f"The directory {experiment_path} does not exist but should."
     
     if (experiment_path / "args" / "args.yaml").is_file():
         args = load_args_from_yaml(yaml_file_path=experiment_path / "args" / "args.yaml")

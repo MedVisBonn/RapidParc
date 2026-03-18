@@ -10,6 +10,7 @@ output_tcks/
 *.safetensors
 *.yaml
 *.yml
+dist/
 
 rapidparc/
 rapidparc_v8/
