@@ -23,4 +23,4 @@ def main():
                         seed=args.seed,
                         device=torch.device(args.device),
                         print_time=args.print_time,
-                        print_class_distribution=args.print_class_distributiion)
+                        print_class_distribution=args.print_class_distribution)
